@@ -74,7 +74,8 @@ The available options are
 - Circular references (Are much worse, trust me)
 - `undefined`
 - `NaN`, `Infinity`, `-Infinity`
-- Symbol keys
+- Symbols
+- Symbol keys (Except for a little bug)
 - Regular Expressions
 - Functions
 - "Objectified primitives", like `new String("hello")`
