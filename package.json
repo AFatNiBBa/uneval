@@ -1,6 +1,6 @@
 {
-  "name": "tosource",
-  "version": "0.0.1",
+  "name": "uneval.js",
+  "version": "0.9.1",
   "description": "Convert an object to its source code (With circular references too!)",
   "main": "main.js",
   "scripts": {
@@ -15,7 +15,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/AFatNiBBa/toSource"
+    "url": "https://github.com/AFatNiBBa/uneval"
   },
   "author": "AFatNiBBa",
   "license": "ISC"

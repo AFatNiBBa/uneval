@@ -1,15 +1,15 @@
 
-# toSource
+# uneval.js
 Convert an object to its source code (With circular references too!)
 
 ## Usage
 You can both import the package like this...
 ```js
-const uneval = require("tosource");
+const uneval = require("uneval.js");
 ```
 ...and like this
 ```js
-const { uneval } = require("tosource");
+const { uneval } = require("uneval.js");
 ```
 Simply pass the function as an argument to obtain the source code and eval it to obtain the object again.
 > You additionally can give some options to personalize the output
@@ -73,6 +73,7 @@ The available options are
 - Multiple references (Even in Symbol keys)
 - Circular references (Are much worse, trust me)
 - `undefined`
+- `NaN`, `Infinity`, `-Infinity`
 - Symbol keys
 - Regular Expressions
 - Functions
@@ -81,6 +82,7 @@ The available options are
 - Custom types
 
 ## Coming soon (Hopefully) in order of probability
+- Date
 - Maps and Sets
 - Arrays and Functions custom fields
 - Non enumerables

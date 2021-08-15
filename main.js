@@ -204,6 +204,7 @@ module.exports = class Struct {
                     : this.utils.nested(obj, struct, opts, level)
             )
             case "undefined":   return "undefined";
+            case "number":      return obj + "";
             case "bigint":      return obj + "n";
             default:            return JSON.stringify(obj);
         }
