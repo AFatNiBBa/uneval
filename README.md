@@ -40,31 +40,31 @@ console.log(uneval([1, { a: "hi" }], { pretty: false })) // [1,{a:"hi"}]
 ## Options
 Additionally to the object to stringify you can pass an option object to personalize your output.
 The available options are
-- `pretty`
+- **`pretty`**
     - Setting it to `false` deactivates `space`, `endl` and `tab`
     - It defaults to `true`
-- `space`
+- **`space`**
     - Set the string that will replace the spaces in the output
     - Setting it to `false` is like setting it to `""`
     - It defaults to `" "`
-- `endl`
+- **`endl`**
     - Set the string that will replace the new lines in the output
     - Setting it to `false` is like setting it to `""`
     - It defaults to `"\n"`
-- `tab`
+- **`tab`**
     - Set the string that will replace the tabs in the output
     - Setting it to `false` is like setting it to `""`
     - It defaults to `"\t"`
-- `proto`
+- **`proto`**
     - Saves the class of objects (Including the `__proto__` property)
     - It defaults to `true`
-- `safe`
+- **`safe`**
     - Wraps object literals in brackets to not confuse them with blocks
     - It defaults to `true`
-- `func`
+- **`func`**
     - Put the top object in a function that defines the cache variable
     - It defaults to `true`
-- `val`
+- **`val`**
     - The name of the variable which will cache the repeated references
     - It defaults to `"x"`
 
