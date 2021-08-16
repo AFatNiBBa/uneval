@@ -91,13 +91,23 @@ The available options are
 5. New syntax for object's methods, like `{ func() {} }`
 
 ## Known Problems
+(I don't know hot to put issues on github 😳)
+- The references to a primitive version of a symbol are not detected
+    ```js
+    const a = Symbol("hi");
+    const b = eval(uneval({
+        c: Object(a),
+        d: a
+    }));
+    console.log(b.c === b.d); // false
+    ```
 - The serialized prototypes will not be the same instance as the class' default prototype
     ```js
-    const temp = eval(uneval(new class a { }));
+    const b = eval(uneval(new class a { }));
     console.log(
-        temp,
-        temp instanceof (temp.constructor),
-        temp.__proto__ === temp.__proto__.constructor.prototype
+        b,
+        b instanceof (b.constructor),
+        b.__proto__ === b.__proto__.constructor.prototype
     ); // {} false false
     ```
 - If an object of special type (Such as `String`, `Date`, ...) contains the first reference to an other object, that object will become undefined everywhere
