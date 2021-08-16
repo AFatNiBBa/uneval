@@ -3,7 +3,6 @@
 //[WIP]: Refactor in modo tale che si veda la documentazione (Tirare fuori datlla proxy, o meglio, usa typescript)
 //[WIP]: Set e Map devono essere scannerizzati come array
 //[MAY]: (Trap)
-//[/!\]: I __proto__ generati non sono uguali ai prototipi della classe
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
 //[/!\]: Non viene cacheata la versione primitiva di un oggetto simbol (x[a]=Object(x[b]=Symbol("c")))
 
@@ -39,7 +38,6 @@ module.exports = class Struct {
             yield out;
         },
     
-
         /**
          * Return the structure object of "obj"
          * @param {any} obj The object to scan
@@ -62,11 +60,14 @@ module.exports = class Struct {
                 cache.set(obj, out);
                 if (type === "object")
                 {
-                    for (const k of Reflect.ownKeys(obj).concat("__proto__"))
+                    for (let k of Reflect.ownKeys(obj).concat("__proto__"))
                     {
-                        const v = obj[k], temp = [];
-                        if (k === "__proto__" && (!opts.proto || this.managedProtos.has(v)))
-                            continue;
+                        let v = obj[k], temp = [];
+                        if (k === "__proto__")
+                            if (!opts.proto || this.managedProtos.has(v))
+                                continue;
+                            else if (v.constructor.prototype === v) // Il prototipo è quello di una classe 
+                                v = v.constructor;
 
                         //[ Riferimento Circolare ]
                         for (const x of [ k, v ])
@@ -191,15 +192,17 @@ module.exports = class Struct {
             {
                 for (const [ k, [ kS, vS ] ] of struct.sub)
                 {
+                    const v = obj[k];
+                    const proto = (k === "__proto__" && v.constructor.prototype === v) || ""; // Il prototipo è quello di una classe 
                     temp.push(`${
                         typeof kS === "number"
                         ? `[${ opts.val }[${ kS }]]`
                         : this.key(k, true, this.save(kS, opts))
-                    }:${ opts.space }${ this.parent.stringify(obj[k], vS, opts, level + opts.tab + next) }`);
+                    }:${ opts.space }${ proto && "(" }${ this.parent.stringify(proto ? v.constructor : v, vS, opts, level + opts.tab + next) }${ proto && ").prototype" }`);
                 }
             }
     
-            //[ Oggetto ]                                                        ↓ Se l'oggetto è vuoto non va a capo
+            //[ Oggetto ]                           ↓ Se l'oggetto è vuoto non va a capo
             const out = `${ isArray ? "[" : "{" }${ temp.length ? g : "" }${ temp.join("," + g) }${ temp.length ? gl : "" }${ isArray ? "]" : "}" }`
     
             //[ Riferimenti circolari ]

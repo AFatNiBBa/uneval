@@ -83,6 +83,10 @@ The available options are
 - Big Integers
 - Custom types
 
+## Unsupported
+- Proxies (If you know how to extract the `[[Target]]` and the `[[Handler]]` of a proxy tell me)
+- Clojures (Functions that access external local variables)
+
 ## Coming Soon (Hopefully) in order of probability
 1. Maps and Sets
 2. Arrays and Functions custom fields
@@ -100,15 +104,6 @@ The available options are
         d: a
     }));
     console.log(b.c === b.d); // false
-    ```
-- The serialized prototypes will not be the same instance as the class' default prototype
-    ```js
-    const b = eval(uneval(new class a { }));
-    console.log(
-        b,
-        b instanceof (b.constructor),
-        b.__proto__ === b.__proto__.constructor.prototype
-    ); // {} false false
     ```
 - If an object of special type (Such as `String`, `Date`, ...) contains the first reference to an other object, that object will become undefined everywhere
     ```js
