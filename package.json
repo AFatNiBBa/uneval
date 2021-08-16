@@ -1,15 +1,17 @@
 {
   "name": "uneval.js",
-  "version": "1.0.0",
-  "description": "Convert an object to its source code (With circular references too!)",
+  "version": "1.0.1",
+  "description": "Convert an object to its source code (With references too!)",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "uneval",
+    "eval",
     "toSource",
     "serialize",
+    "serialization",
     "stringify",
     "json"
   ],

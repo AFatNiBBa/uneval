@@ -1,12 +1,13 @@
 
-//[WIP]: Map, Set, {obj,array,func}.{get,set}, {array,func}.prop(anche __proto__), { "obj.func"(){} }(è dura)
+//[WIP]: Map, Set, {array,func}.prop(anche __proto__), {obj,array,func}.{get,set}, { "obj.func"(){} }(è dura)
+//[WIP]: Refactor in modo tale che si veda la documentazione (Tirare fuori datlla proxy, o meglio, usa typescript)
 //[WIP]: Tira fuori il codice per mettere in cache facendo in modo che tutti i tipi siano supportati
 //[MAY]: (Trap)
 //[/!\]: I __proto__ generati non sono uguali ai prototipi della classe
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
 
 /**
- * This implementation only works if the object keys are retrieved in the same order in which they are scanned, otherwise you may reference a not defined cache value
+ * This implementation only works if the object keys are retrieved in the same order in which they are scanned, the "Map" object allows that
  * If a cache entry is empty is because is inside of a managed object's "__proto__"
  */
 module.exports = class Struct {
