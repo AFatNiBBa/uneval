@@ -75,17 +75,37 @@ The available options are
 - `undefined`
 - `NaN`, `Infinity`, `-Infinity`
 - Symbols
-- Symbol keys (Except for a little bug)
+- Symbol keys
+- Dates
 - Regular Expressions
 - Functions
 - "Objectified primitives", like `new String("hello")`
 - Big Integers
 - Custom types
 
-## Coming soon (Hopefully) in order of probability
-- Date
-- Maps and Sets
-- Arrays and Functions custom fields
-- Non enumerables
-- Getters and Setters
-- New syntax for object's methods, like `{ func() {} }`
+## Coming Soon (Hopefully) in order of probability
+1. Maps and Sets
+2. Arrays and Functions custom fields
+3. Non enumerable properties
+4. Getters and Setters
+5. New syntax for object's methods, like `{ func() {} }`
+
+## Known Problems
+- The serialized prototypes will not be the same instance as the class' default prototype
+    ```js
+    const temp = eval(uneval(new class a { }));
+    console.log(
+        temp,
+        temp instanceof (temp.constructor),
+        temp.__proto__ === temp.__proto__.constructor.prototype
+    ); // {} false false
+    ```
+- If an object of special type (Such as `String`, `Date`, ...) contains the first reference to an other object, that object will become undefined everywhere
+    ```js
+    const a = new Date();
+    a.b = {};
+    console.log(eval(uneval({
+        a,
+        b: a.b
+    }))); // { a: 2021-08-16T02:57:10.125Z, b: undefined }
+    ```

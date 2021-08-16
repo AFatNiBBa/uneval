@@ -1,8 +1,9 @@
 
 //[WIP]: Map, Set, {obj,array,func}.{get,set}, {array,func}.prop(anche __proto__), { "obj.func"(){} }(è dura)
 //[WIP]: Tira fuori il codice per mettere in cache facendo in modo che tutti i tipi siano supportati
-//[WIP]: Usa la cache delle chiavi prima che vengano definite (temp.b.f[0])
 //[MAY]: (Trap)
+//[/!\]: I __proto__ generati non sono uguali ai prototipi della classe
+//[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
 
 /**
  * This implementation only works if the object keys are retrieved in the same order in which they are scanned, otherwise you may reference a not defined cache value
@@ -19,6 +20,7 @@ module.exports = class Struct {
      */
     static utils = {
         parent: this,
+        managedProtos: new Set([ Object, Array, Function, RegExp, Date, String, Number, Boolean, Symbol, BigInt ].map(x => x.prototype)),
 
         /**
          * Wraps a generator with an other generator that allows you to receive not only the "value", but the "done" and the return value too
@@ -37,7 +39,8 @@ module.exports = class Struct {
     
         *scan(obj, opts = {}, gen = { i: 0 }, cache = new Map()) {
             const type = typeof obj;
-            if (obj === null || (type !== "object" && type !== "function" && type !== "symbol")) return null;
+            if (obj === null || (type !== "object" && type !== "function" && type !== "symbol"))
+                return null;
             if(cache.has(obj))
                 //[ Riferimento multiplo ]
                 return cache.get(obj).ref(gen);
@@ -47,39 +50,30 @@ module.exports = class Struct {
                 cache.set(obj, out);
                 if (type === "object")
                 {
-                    for (let k of Reflect.ownKeys(obj).concat("__proto__"))
+                    for (const k of Reflect.ownKeys(obj).concat("__proto__"))
                     {
-                        const v = obj[k];
-                        if (k === "__proto__" && (!opts.proto || v === Object.prototype || v === Array.prototype))
+                        const v = obj[k], temp = [];
+                        if (k === "__proto__" && (!opts.proto || this.managedProtos.has(v)))
                             continue;
-    
-                        //[ Riferimento multiplo a chiave symbol ]
-                        if (typeof k === "symbol")
-                        {
-                            let temp;
-                            if (!cache.has(k)) cache.set(k, temp = new (this.parent)());
-                            else (temp = cache.get(k)).ref(gen);
-                            [ k, temp.sym, temp.done ] = [ temp, k, false ];
-                        }
-        
-                        //[ Autoriferimento ]
-                        if (v === obj) out.cir.push({ obj: out.ref(gen), k });
-                        else var temp = yield { obj: out, k, v };
-        
+
                         //[ Riferimento Circolare ]
-                        for (const { value, done, next } of this.wrap(this.scan(v, opts, gen, cache)))
-                            if (done)
-                                if (v !== obj && !temp) // Evita di mettere le chiavi che hanno valori circolari
-                                    out.sub.set(k, value);
-                                else;
-                            else if (value.v === obj)
-                            {
-                                next(true);
-                                delete value.v;
-                                value.obj = value.obj.ref(gen);
-                                out.cir.push(value);
-                            }
-                            else next(yield value);
+                        for (const x of [ k, v ])
+                            for (const { value, done, next } of this.wrap(this.scan(x, opts, gen, cache)))
+                                if (done)
+                                    temp.push(value);
+                                else if (value.v === obj)
+                                {
+                                    next(true);
+                                    delete value.v;
+                                    value.obj = value.obj.ref(gen);
+                                    out.cir.push(value);
+                                }
+                                else next(yield value);
+                        
+                        //[ Autoriferimento ]
+                        if (v === obj) out.cir.push({ obj: out.ref(gen), k, kS: temp[0] });
+                        else if (yield { obj: out, k, v, kS: temp[0] });
+                        else out.sub.set(k, temp); // La chiave viene salvata solo se non si tratta di un riferimento circolare
                     }
                 }
                 return out;
@@ -116,21 +110,16 @@ module.exports = class Struct {
             const temp = [];
             if (isArray) 
             for (let i = 0; i < obj.length; i++)
-                temp.push(struct.sub.has(i + "") ? this.parent.stringify(obj[i], struct.sub.get(i + ""), opts, level + opts.tab + next) : "null"); // Prima di essere cercati all'interno di "struct.sub", gli indici devono essere convertiti in stringa
+                temp.push(struct.sub.has(i + "") ? this.parent.stringify(obj[i], struct.sub.get(i + "")[1], opts, level + opts.tab + next) : "null"); // Prima di essere cercati all'interno di "struct.sub", gli indici devono essere convertiti in stringa
             else
             {
-                for (const [ k, v ] of struct.sub)
+                for (const [ k, [ kS, vS ] ] of struct.sub)
                 {
                     temp.push(`${
-                        (k instanceof this.parent && k.id)
-                        ? k.done
-                            ? `[${ opts.val }[${ k.id }]]`                  // Simbolo già salvato
-                            : (
-                                k.done = true,
-                                this.key(k.sym, true, this.save(k, opts))  // Simbolo da salvare
-                            )
-                        : this.key(k.sym ?? k, true)                        // Stringa o Simbolo non duplicato
-                    }:${ opts.space }${ this.parent.stringify(obj[k instanceof this.parent ? k.sym : k], v, opts, level + opts.tab + next) }`);
+                        typeof kS === "number"
+                        ? `[${ opts.val }[${ kS }]]`
+                        : this.key(k, true, this.save(kS, opts))
+                    }:${ opts.space }${ this.parent.stringify(obj[k], vS, opts, level + opts.tab + next) }`);
                 }
             }
     
@@ -143,7 +132,7 @@ module.exports = class Struct {
             : `(${ t }${ out },${ t }${
                 struct
                 .cir
-                .map(x => `${ opts.val }[${ x.obj }]${ this.key(x.k) }${ opts.space }=${ opts.space }${ opts.val }[${ struct.id }]`)
+                .map(x => `${ opts.val }[${ x.obj }]${ typeof x.kS === "number" ? `[${ opts.val }[${ x.kS }]]` : this.key(x.k, false, this.save(x.kS, opts)) }${ opts.space }=${ opts.space }${ opts.val }[${ struct.id }]`)
                 .join("," + t)
             }${ tl })`;
         }
@@ -156,8 +145,8 @@ module.exports = class Struct {
      * @param {Object} gen An object that keep tracks of the ids of the repeating objects
      * @returns 
      */
-    static from(obj, opts, gen) {
-        for (const { value, done } of this.utils.wrap(this.utils.scan(obj, opts, gen))) // Dovrebbe mandare 'false' a "next()", ma va bene uguale visto che anche undefined è falsy
+    static from(obj, opts, gen, cache) {
+        for (const { value, done } of this.utils.wrap(this.utils.scan(obj, opts, gen, cache))) // Dovrebbe mandare 'false' a "next()", ma va bene uguale visto che anche undefined è falsy
             if (done)
                 return value;
     }
@@ -171,7 +160,6 @@ module.exports = class Struct {
      * @returns The stringified object
      */
     static stringify(obj, struct, opts = {}, level = "") {
-        if (struct?.sym) struct.done = true; // Se il simbolo compare dalla parte dei valori, la parte delle chiavi lo considera già salvato
         if (typeof struct === "number")
             return `${ opts.val }[${ struct }]`; // Ottiene riferimento
         else switch(typeof obj)
@@ -199,6 +187,8 @@ module.exports = class Struct {
                     ? "null"
                 : (obj instanceof String || obj instanceof Number || obj instanceof Boolean || obj instanceof Symbol || obj instanceof BigInt)
                     ? `${ this.utils.save(struct, opts) }Object(${ this.stringify(obj.valueOf(), struct, opts, level) })`
+                : obj instanceof Date
+                    ? this.utils.save(struct, opts) + `new Date(${ obj.getTime() })`
                 : obj instanceof RegExp
                     ? this.utils.save(struct, opts) + obj.toString()
                     : this.utils.nested(obj, struct, opts, level)

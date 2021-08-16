@@ -1,6 +1,6 @@
 {
   "name": "uneval.js",
-  "version": "0.9.2",
+  "version": "1.0.0",
   "description": "Convert an object to its source code (With circular references too!)",
   "main": "main.js",
   "scripts": {
