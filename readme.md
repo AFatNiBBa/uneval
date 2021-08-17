@@ -2,13 +2,13 @@
 # uneval.js
 Convert an object to its source code (With circular references too!)
 > Always update to the latest version! <br>
-<span style="font-family: Consolas">
-    <span style="color: #dcdcaa">npm</span> <span style="color: #808080">r</span>
-    <span style="color: #ce9178">uneval.js</span>
-    <span style="color: #569cd6">&</span>
-    <span style="color: #dcdcaa">npm</span> <span style="color: #808080">i</span>
-    <span style="color: #ce9178">uneval.js</span>
-</span>
+> <span style="font-family: Consolas">
+>     <span style="color: #dcdcaa">npm</span> <span style="color: #808080">r</span>
+>     <span style="color: #ce9178">uneval.js</span>
+>     <span style="color: #569cd6">&</span>
+>     <span style="color: #dcdcaa">npm</span> <span style="color: #808080">i</span>
+>     <span style="color: #ce9178">uneval.js</span>
+> </span>
 
 ## Usage
 You can both import the package like this...
