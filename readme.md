@@ -1,7 +1,7 @@
 
 # uneval.js
 Convert an object to its source code (With circular references too!)
-> Always update to the latest version! <br>
+> Always update to the latest version to have more features! <br>
 > ```bash
 > npm r uneval.js & npm i uneval.js
 > ```
@@ -100,7 +100,6 @@ The available options are
 5. New syntax for object's methods, like `{ func() {} }`
 
 ## Known Problems
-(I don't know how to put issues on github 😳)
 - The references to a primitive version of a symbol are not detected
     ```js
     const a = Symbol("hi");
@@ -110,7 +109,7 @@ The available options are
     }));
     console.log(b.c === b.d); // false
     ```
-- If an object of special type (Such as `String`, `Date`, ...) contains the first reference to an other object, that object will become undefined everywhere
+- If an object of special type (Such as `Array`, `String`, `Date`, ...) contains the first reference to an other object, that object will become undefined everywhere
     ```js
     const a = new Date();
     a.b = {};
