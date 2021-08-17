@@ -1,6 +1,14 @@
 
 # uneval.js
 Convert an object to its source code (With circular references too!)
+> Always update to the latest version! <br>
+<span style="font-family: Consolas">
+    <span style="color: #dcdcaa">npm</span> <span style="color: #808080">r</span>
+    <span style="color: #ce9178">uneval.js</span>
+    <span style="color: #569cd6">&</span>
+    <span style="color: #dcdcaa">npm</span> <span style="color: #808080">i</span>
+    <span style="color: #ce9178">uneval.js</span>
+</span>
 
 ## Usage
 You can both import the package like this...
@@ -22,14 +30,14 @@ console.log(uneval(a, { tab: "  " }));
 And the output will be
 ```js
 (x => (
-  x[2] = {
-    c: x[1] = {
+  x[1] = {
+    c: x[2] = {
       url: /^(\+0?1\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}$/gi
     },
-    b: x[1]
+    b: x[2]
   },
-  x[1].a = x[2],
-  x[2].e = x[2]
+  x[2].a = x[1],
+  x[1].e = x[1]
 ))({})
 ```
 Note that the complexity of the output depends on the complexity of the input
