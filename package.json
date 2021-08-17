@@ -1,6 +1,6 @@
 {
   "name": "uneval.js",
-  "version": "2.0.2",
+  "version": "2.0.4",
   "description": "Convert an object to its source code (With references too!)",
   "main": "main.js",
   "scripts": {
@@ -12,6 +12,8 @@
     "toSource",
     "serialize",
     "serialization",
+    "circular",
+    "reference",
     "stringify",
     "json"
   ],

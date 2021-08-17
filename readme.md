@@ -77,7 +77,7 @@ The available options are
 - Multiple references (Even in Symbol keys)
 - Circular references (Are much worse, trust me)
 - `undefined`
-- `NaN`, `Infinity`, `-Infinity`
+- `-0`, `NaN`, `Infinity`, `-Infinity`
 - Symbols
 - Symbol keys
 - Functions
@@ -85,8 +85,9 @@ The available options are
 - Maps
 - Sets
 - Dates
-- "Objectified primitives", like `new String("hello")`
+- Boxed Primitives, like `new String("hello")`
 - Big Integers
+- `Object.create(null)`
 - Custom types
 
 ## Unsupported (Or at least not completely)
@@ -94,10 +95,13 @@ The available options are
 - Clojures (Functions that access external local variables)
 
 ## Coming Soon (Hopefully) in order of probability
-2. Arrays and Functions custom fields
-3. Non enumerable properties
-4. Getters and Setters
-5. New syntax for object's methods, like `{ func() {} }`
+1. Global
+2. Buffer
+3. Sparse arrays
+4. Arrays and Functions custom fields
+5. Non enumerable properties
+6. Getters and Setters
+7. New syntax for object's methods, like `{ func() {} }`
 
 ## Known Problems
 - The references to a primitive version of a symbol are not detected

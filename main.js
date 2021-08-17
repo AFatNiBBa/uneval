@@ -5,6 +5,8 @@
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
 //[/!\]: Non viene cacheata la versione primitiva di un oggetto simbol (x[a]=Object(x[b]=Symbol("c")))
 
+//[WIP]: Spazio fine riga, Buffer, Global, Sparse array
+
 /**
  * This implementation only works if the object keys are retrieved in the same order in which they are scanned, the "Map" object allows that
  * If a cache entry is empty is because is inside of a managed object's "__proto__"
@@ -70,7 +72,7 @@ module.exports = class Struct {
                         if (k === "__proto__")
                             if (!opts.proto || this.managedProtos.has(v))
                                 continue;
-                            else if (v.constructor.prototype === v) // Il prototipo è quello di una classe 
+                            else if (v && v?.constructor?.prototype === v) // Il prototipo è quello di una classe 
                                 v = v.constructor;
 
                         //[ Riferimento Circolare ]
@@ -167,7 +169,7 @@ module.exports = class Struct {
                         : this.nested(obj, struct, opts, level)
                 )
                 case "undefined":   return "undefined";
-                case "number":      return obj + "";
+                case "number":      return Object.is(obj, -0) ? "-0" : (obj + "");
                 case "bigint":      return obj + "n";
                 default:            return JSON.stringify(obj);
             }
@@ -199,7 +201,7 @@ module.exports = class Struct {
                 for (const [ k, [ kS, vS ] ] of struct.sub)
                 {
                     const v = obj[k];
-                    const proto = (k === "__proto__" && v.constructor.prototype === v) || ""; // Il prototipo è quello di una classe 
+                    const proto = (k === "__proto__" && v && v?.constructor?.prototype === v) || ""; // Il prototipo è quello di una classe 
                     temp.push(`${
                         typeof kS === "number"
                         ? `[${ opts.val }[${ kS }]]`
