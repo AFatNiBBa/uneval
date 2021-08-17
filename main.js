@@ -1,7 +1,6 @@
 
-//[WIP]: Map, Set, {array,func}.prop(anche __proto__), {obj,array,func}.{get,set}, { "obj.func"(){} }(è dura)
-//[WIP]: Refactor in modo tale che si veda la documentazione (Tirare fuori datlla proxy, o meglio, usa typescript)
-//[WIP]: Set e Map devono essere scannerizzati come array
+//[WIP]: {array,func}.prop(anche __proto__), {obj,array,func}.{get,set}, { "obj.func"(){} }(è dura)
+//[WIP]: Refactor in modo tale che si veda la documentazione (Tirare fuori dal proxy, o meglio, usa typescript)
 //[MAY]: (Trap)
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
 //[/!\]: Non viene cacheata la versione primitiva di un oggetto simbol (x[a]=Object(x[b]=Symbol("c")))
@@ -60,6 +59,11 @@ module.exports = class Struct {
                 cache.set(obj, out);
                 if (type === "object")
                 {
+                    // [ Scanning 'Map' & 'Set' ]
+                    if (obj instanceof Map || obj instanceof Set)
+                        out.value = obj = [ ...obj ];
+                    
+                    // [ Scanning sotto proprietà ]
                     for (let k of Reflect.ownKeys(obj).concat("__proto__"))
                     {
                         let v = obj[k], temp = [];
@@ -153,9 +157,11 @@ module.exports = class Struct {
                     obj === null
                         ? "null"
                     : (obj instanceof String || obj instanceof Number || obj instanceof Boolean || obj instanceof Symbol || obj instanceof BigInt)
-                        ? `Object(${ this.stringify(obj.valueOf(), struct, opts, level) })` // (x[a]=Object(x[b]=Symbol("c")))
+                        ? `Object(${ this.stringify(obj.valueOf(), struct, opts, level) })` //[/!\]: Non supporta (x[a]=Object(x[b]=Symbol("c")))
                     : obj instanceof Date
                         ? `new Date(${ obj.getTime() })`
+                    : (obj instanceof Set || obj instanceof Map)
+                        ? `new ${ obj.constructor.name }(${ this.stringify(struct.value, struct, opts, level) })`
                     : obj instanceof RegExp
                         ? obj.toString()
                         : this.nested(obj, struct, opts, level)
@@ -215,7 +221,7 @@ module.exports = class Struct {
                 .join("," + t)
             }${ tl })`;
         }
-    }
+    };
 
     /**
      * Return the structure object of "obj"

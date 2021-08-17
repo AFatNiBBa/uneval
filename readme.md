@@ -15,7 +15,7 @@ Simply pass the function as an argument to obtain the source code and eval it to
 > You additionally can give some options to personalize the output
 ```js
 const a = {};
-a.b = a.c = { a, url: /^(\+0?1\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}$/ };
+a.b = a.c = { a, url: /^(\+0?1\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}$/ig };
 a.e = a;
 console.log(uneval(a, { tab: "  " }));
 ```
@@ -24,7 +24,7 @@ And the output will be
 (x => (
   x[2] = {
     c: x[1] = {
-      url: /^(\+0?1\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}$/
+      url: /^(\+0?1\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}$/gi
     },
     b: x[1]
   },
@@ -76,26 +76,27 @@ The available options are
 - `NaN`, `Infinity`, `-Infinity`
 - Symbols
 - Symbol keys
-- Dates
-- Regular Expressions
 - Functions
+- Regular Expressions
+- Maps
+- Sets
+- Dates
 - "Objectified primitives", like `new String("hello")`
 - Big Integers
 - Custom types
 
-## Unsupported
+## Unsupported (Or at least not completely)
 - Proxies (If you know how to extract the `[[Target]]` and the `[[Handler]]` of a proxy tell me)
 - Clojures (Functions that access external local variables)
 
 ## Coming Soon (Hopefully) in order of probability
-1. Maps and Sets
 2. Arrays and Functions custom fields
 3. Non enumerable properties
 4. Getters and Setters
 5. New syntax for object's methods, like `{ func() {} }`
 
 ## Known Problems
-(I don't know hot to put issues on github 😳)
+(I don't know how to put issues on github 😳)
 - The references to a primitive version of a symbol are not detected
     ```js
     const a = Symbol("hi");
