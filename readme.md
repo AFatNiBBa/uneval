@@ -3,7 +3,7 @@
 Convert an object to its source code (With circular references too!) <br>
 Now even in the browser!
 ```html
-<script src="https://cdn.jsdelivr.net/gh/AFatNiBBa/uneval/main.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/AFatNiBBa/uneval@latest/main.js"></script>
 ```
 > Always update to the latest version to have more features! <br>
 > ```bash
