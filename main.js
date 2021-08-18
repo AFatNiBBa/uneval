@@ -1,5 +1,5 @@
 
-//[WIP]: {array,func}.prop(anche __proto__), {obj,array,func}.{get,set}, { "obj.func"(){} }(è dura)
+//[WIP]: {array,func}.prop(anche __proto__), {obj,array,func}.{get,set}
 //[MAY]: (Trap)
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
 //[/!\]: Non viene cacheata la versione primitiva di un oggetto simbol (x[a]=Object(x[b]=Symbol("c")))
@@ -19,7 +19,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
      */
     static utils = {
         parent: this,
-        managedProtos: new Set([ Object, Array, Function, RegExp, Date, String, Number, Boolean, Symbol, BigInt ].map(x => x.prototype)),
+        managedProtos: new Set([ Object, Array, Function, RegExp, Date, String, Number, Boolean, Symbol, BigInt, globalThis.Buffer ].map(x => (x ?? Object).prototype)),
 
         /**
          * Wraps a generator with an other generator that allows you to receive not only the "value", but the "done" and the return value too
@@ -140,9 +140,13 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
             {
                 case "function": {
                     const out = obj.toString();
-                    return (out.endsWith(") { [native code] }") || out.endsWith(") { [Command Line API] }"))
-                    ? `null${ opts.pretty && " /* Native Code */" }`
-                    : out;
+                    return (
+                        (out.endsWith(") { [native code] }") || out.endsWith(") { [Command Line API] }"))
+                            ? `null${ opts.pretty && " /* Native Code */" }`
+                        : (/^(async\s+)?([\["*]|(?!\(|function\W|class(?!\s*\()\W))/).test(out)
+                            ? `(x=>x[Reflect.ownKeys(x)[0]])({${ out }})`
+                            : out
+                    );
                 }
                 case "symbol": {
                     const temp = obj.description;
@@ -166,7 +170,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
                     : obj instanceof RegExp
                         ? obj.toString()
                     : (typeof Buffer !== "undefined" && obj instanceof Buffer)
-                        ? `Buffer.from(${ this.stringify(obj.toString("base64"), struct, opts, level) },${ opts.space }"base64")`
+                        ? `Buffer.from(${ JSON.stringify(obj.toString("base64")) },${ opts.space }"base64")`
                         : this.nested(obj, struct, opts, level)
                 );
                 case "undefined":   return "undefined";
@@ -261,28 +265,36 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
     }
 
     /**
-     * Convert an object to its source code and wraps it to make it valid everywhere
-     * @param {any} obj The object to stringify
-     * @param {Object} opts An object containing the preferences of the conversion
-     * @returns The stringified object
+     * Like the "Struct" class but can be called as a function
      */
-    static uneval = (obj, opts = {}) => {
-        //[ Default ]
-        const pretty = opts.pretty = (opts.pretty ?? true) || "";
-        opts.space = pretty && ((opts.space ?? " ") || "");
-        opts.endl = pretty && ((opts.endl ?? "\n") || "");
-        opts.tab = pretty && ((opts.tab ?? "\t") || "");
-        opts.proto ??= true;
-        opts.safe ??= true;
-        opts.func ??= true;
-        opts.val ??= "x";
+    static uneval = new Proxy(this, {
+        /**
+         * Convert an object to its source code and wraps it to make it valid everywhere
+         * @param {Function} t The Target
+         * @param {null} self The 
+         * @param {Array} args The object to save and the options
+         * @returns The stringified object
+         */
+        apply(t, self, [ obj, opts = {} ]) {
+            //[ Default ]
+            const pretty = opts.pretty = (opts.pretty ?? true) || "";
+            opts.space = pretty && ((opts.space ?? " ") || "");
+            opts.endl = pretty && ((opts.endl ?? "\n") || "");
+            opts.tab = pretty && ((opts.tab ?? "\t") || "");
+            opts.proto ??= true;
+            opts.safe ??= true;
+            opts.func ??= true;
+            opts.val ??= "x";
 
-        //[ Wrapping con funzione se serve la cache ]
-        const temp = { i: 0 };
-        var out = this.stringify(obj, this.from(obj, opts, temp), opts);
-        if (opts.safe && out[0] == "{") out = `(${ out })`;
-        return opts.func && temp.i
-        ? `(${ opts.val }${ opts.space }=>${ opts.space }${ out })({})`
-        : out;
-    };
+            //[ Wrapping con funzione se serve la cache ]
+            const temp = { i: 0 };
+            var out = t.stringify(obj, t.from(obj, opts, temp), opts);
+            if (opts.safe && out[0] == "{") out = `(${ out })`;
+            return opts.func && temp.i
+            ? `(${ opts.val }${ opts.space }=>${ opts.space }${ out })({})`
+            : out;
+        },
+
+        has: (t, k) => k in t
+    });
 }.uneval;

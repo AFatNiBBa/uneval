@@ -93,6 +93,7 @@ The available options are
 - Sets
 - Dates
 - Boxed Primitives, like `new String("hello")`
+- New syntax for object's methods, like `{ func() {} }` (Will look very bad)
 - Big Integers
 - Objects without a prototype
 - Custom types
@@ -107,7 +108,6 @@ The available options are
 1. Arrays and Functions custom fields
 2. Non enumerable properties
 3. Getters and Setters
-4. New syntax for object's methods, like `{ func() {} }`
 
 ## Known Problems
 - The references to a primitive version of a symbol are not detected
