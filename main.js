@@ -14,7 +14,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
     ref(gen) { return this.id ||= ++gen.i; }
 
     /**
-     * Internals functions
+     * Internal functions
      */
     static utils = {
         parent: this,
