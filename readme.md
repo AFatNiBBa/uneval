@@ -5,7 +5,7 @@ Now even in the browser!
 ```html
 <script src="https://cdn.jsdelivr.net/gh/AFatNiBBa/uneval@latest/main.js"></script>
 ```
-> Always update to the latest version to have more features! <br>
+> Always update to the latest version to have more features and bug fixes! <br>
 > ```bash
 > npm r uneval.js & npm i uneval.js
 > ```
@@ -42,12 +42,25 @@ And the output will be
 ```
 Note that the complexity of the output depends on the complexity of the input
 ```js
-console.log(uneval([1, { a: "hi" }], { pretty: false })) // [1,{a:"hi"}]
+console.log(uneval([1, { a: "hi" }], { tab: 0, endl: 0 })) // [ 1, { a: "hi" } ]
+```
+You can save an object to file using the write function (Only in node)
+```js
+uneval.write("./filename.js", [1, { a: "hi" }], { tab: "  " });
+```
+Then `"filename.js"` will contain
+```js
+module.exports = [ 
+  1, 
+  { 
+    a: "hi" 
+  } 
+];
 ```
 
 ## Options
 Additionally to the object to stringify you can pass an option object to personalize your output.
-The available options are
+The available options are:
 - **`pretty`**
     - Setting it to `false` deactivates `space`, `endl` and `tab`
     - It defaults to `true`
@@ -63,6 +76,9 @@ The available options are
     - Set the string that will replace the tabs in the output
     - Setting it to `false` is like setting it to `""`
     - It defaults to `"\t"`
+- **`method`**
+    - If is set to `false` allows only the safe, but way uglier, syntax of objects methods
+    - It defaults to `true`
 - **`proto`**
     - Saves the class of objects (Including the `__proto__` property)
     - It defaults to `true`
@@ -75,13 +91,25 @@ The available options are
 - **`val`**
     - The name of the variable which will cache the repeated references
     - It defaults to `"x"`
+- **`conv`**
+    - Only in the "write" function
+    - If `false` the function will assume that the object is already serialized
+    - It defaults to `true`
+- **`export`**
+    - Only in the "write" function
+    - The code that will be put in front of the object source
+    - It defaults to `"module.exports = "`, the spaces will be the ones defined in the options
+
+Note that in every option which accepts a boolean you can put `0` to represent `false` and everything not "falsy" to represent `true`.
 
 ## Supported
 - All the things supported by json
 - Multiple references (Even in Symbol keys)
+    > In boxed symbols both the object and the primitive version can be referenced
 - Circular references (Are much worse to implement, trust me)
 - Sparse arrays
-- Buffer (Only in node.js, not in Web)
+- Buffer
+    > Only in node.js, not in Web
 - The Global object
 - `undefined`
 - `-0`, `NaN`, `Infinity`, `-Infinity`
@@ -93,32 +121,34 @@ The available options are
 - Sets
 - Dates
 - Boxed Primitives, like `new String("hello")`
-- New syntax for object's methods, like `{ func() {} }` (Will look very bad)
+- New syntax for object's methods, like `{ func() {} }` (It'll look very bad with multiple references)
+    > Note that generating like that a method called "function" would work by default
 - Big Integers
-- Objects without a prototype
+- Objects with a `null` prototype
 - Custom types
+- The module itself 😳
 
 ## Unsupported (Or at least not completely)
 - Proxies (If you know how to extract the `[[Target]]` and the `[[Handler]]` of a proxy tell me)
 - Clojures (Functions that access external local variables)
+    > If you create a function with the new object method syntax and a computed key...
+    > ```js
+    > uneval({
+    >     [`val${ index }`]() {
+    >         return 1;
+    >     }
+    > })
+    > ```
+    > ...you have to be carefull with what is inside the computed field too, unless you set the `method` option to `false` or the function is reference elsewhere
 - Native functions
 - Command Line API functions (Web)
 
-## Coming Soon (Hopefully) in order of probability
+## Future Support (Hopefully) in order of probability
 1. Arrays and Functions custom fields
 2. Non enumerable properties
 3. Getters and Setters
 
 ## Known Problems
-- The references to a primitive version of a symbol are not detected
-    ```js
-    const a = Symbol("hi");
-    const b = eval(uneval({
-        c: Object(a),
-        d: a
-    }));
-    console.log(b.c === b.d); // false
-    ```
 - If an object of special type (Such as `Array`, `String`, `Date`, ...) contains the first reference to an other object, that object will become undefined everywhere
     ```js
     const a = new Date();

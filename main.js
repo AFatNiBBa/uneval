@@ -1,8 +1,7 @@
 
-//[WIP]: {array,func}.prop(anche __proto__), {obj,array,func}.{get,set}
-//[MAY]: (Trap)
+//[WIP]: {array,func(fa attenzione al test per method)}.prop(anche __proto__, problema simboli), {obj,array,func}.{get,set}
+//[MAY]: Refactor modulare per supporto serializzazioni personalizzate
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
-//[/!\]: Non viene cacheata la versione primitiva di un oggetto simbol (x[a]=Object(x[b]=Symbol("c")))
 
 /**
  * This implementation only works if the object keys are retrieved in the same order in which they are scanned, the "Map" object allows that
@@ -19,6 +18,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
      */
     static utils = {
         parent: this,
+        method: /^(async\s+)?([\["*]|(?!\(|function\W|class(?!\s*\()\W))/,
         managedProtos: new Set([ Object, Array, Function, RegExp, Date, String, Number, Boolean, Symbol, BigInt, globalThis.Buffer ].map(x => (x ?? Object).prototype)),
 
         /**
@@ -58,12 +58,14 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
                 cache.set(obj, out);
                 if (type === "object" && obj !== globalThis)
                 {
-                    // [ Scanning 'Map' & 'Set' ]
-                    if (obj instanceof Map || obj instanceof Set)
+                    //[ Eccezioni ]
+                    if (obj instanceof Symbol) // Scan parte primitiva
+                        out.value = this.parent.scan(obj.valueOf(), opts, gen, cache);
+                    else if (obj instanceof Map || obj instanceof Set)
                         out.value = obj = [ ...obj ];
                     
                     // [ Scanning sotto proprietà ]
-                    for (let k of Reflect.ownKeys(obj).concat("__proto__"))
+                    else for (let k of Reflect.ownKeys(obj).concat("__proto__"))
                     {
                         let v = obj[k], temp = [];
                         if (k === "__proto__")
@@ -105,7 +107,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
          */
         key(str, obj = false, val = "") {
             return typeof str === "symbol"
-            ? `[${ val }${ this.parent.stringify(str, null) }]`
+            ? `[${ val }${ this.parent.source(str, null) }]`
             : (
                 str.match(/^[A-Za-z$_][0-9A-Za-z$_]*$/) 
                 ? (obj ? str : "." + str)
@@ -123,7 +125,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
          * @param {Object} opts An object containing the preferences of the conversion
          * @returns The code to save the object to the cache
          */
-        save(struct, opts) {
+        def(struct, opts) {
             return (struct?.id || "") && (`${ opts.val }[${ struct.id }]${ opts.space }=${ opts.space }`);
         },
 
@@ -135,7 +137,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
          * @param {String} level The tabs to put before each line
          * @returns The stringified object
          */
-        stringify(obj, struct, opts = {}, level = "") {
+        source(obj, struct, opts = {}, level = "") {
             switch(typeof obj)
             {
                 case "function": {
@@ -143,7 +145,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
                     return (
                         (out.endsWith(") { [native code] }") || out.endsWith(") { [Command Line API] }"))
                             ? `null${ opts.pretty && " /* Native Code */" }`
-                        : (/^(async\s+)?([\["*]|(?!\(|function\W|class(?!\s*\()\W))/).test(out)
+                        : this.method.test(out)
                             ? `(x=>x[Reflect.ownKeys(x)[0]])({${ out }})`
                             : out
                     );
@@ -161,12 +163,14 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
                         ? "null"
                     : obj === globalThis
                         ? `globalThis`
-                    : (obj instanceof String || obj instanceof Number || obj instanceof Boolean || obj instanceof Symbol || obj instanceof BigInt)
-                        ? `Object(${ this.stringify(obj.valueOf(), struct, opts, level) })` //[/!\]: Non supporta (x[a]=Object(x[b]=Symbol("c")))
+                    : (obj instanceof String || obj instanceof Number || obj instanceof Boolean || obj instanceof BigInt)
+                        ? `Object(${ this.source(obj.valueOf(), struct, opts, level) })`
+                    : obj instanceof Symbol
+                        ? `Object(${ this.parent.source(obj.valueOf(), struct.value, opts, level) })`
                     : obj instanceof Date
                         ? `new Date(${ obj.getTime() })`
                     : (obj instanceof Set || obj instanceof Map)
-                        ? `new ${ obj.constructor.name }(${ this.stringify(struct.value, struct, opts, level) })`
+                        ? `new ${ obj.constructor.name }(${ this.source(struct.value, struct, opts, level) })`
                     : obj instanceof RegExp
                         ? obj.toString()
                     : (typeof Buffer !== "undefined" && obj instanceof Buffer)
@@ -201,7 +205,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
             if (isArray) 
             for (let i = 0; i < obj.length; i++)
                 if (struct.sub.has(i + "")) // Prima di essere cercati all'interno di "struct.sub", gli indici devono essere convertiti in stringa
-                    temp.push(this.parent.stringify(obj[i], struct.sub.get(i + "")[1], opts, level + opts.tab + next));
+                    temp.push(this.parent.source(obj[i], struct.sub.get(i + "")[1], opts, level + opts.tab + next));
                 else if (temp.length && (!temp[temp.length - 1] || temp[temp.length - 1][0] === ",")) // Se una serie consecutiva di elementi non ci sono lascia una riga di virgole
                     temp[temp.length - 1] += ",";
                 else temp.push("");
@@ -210,12 +214,17 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
                 for (const [ k, [ kS, vS ] ] of struct.sub)
                 {
                     const v = obj[k];
-                    const proto = (k === "__proto__" && v && v?.constructor?.prototype === v) || ""; // Il prototipo è quello di una classe 
-                    temp.push(`${
-                        typeof kS === "number"
-                        ? `[${ opts.val }[${ kS }]]`
-                        : this.key(k, true, this.save(kS, opts))
-                    }:${ opts.space }${ proto && "(" }${ this.parent.stringify(proto ? v.constructor : v, vS, opts, level + opts.tab + next) }${ proto && ").prototype" }`);
+                    if (opts.method && v instanceof Function && typeof vS !== "number" && !vS.id && this.method.test(v.toString()))
+                        temp.push(v.toString());
+                    else
+                    {
+                        const proto = (k === "__proto__" && v && v?.constructor?.prototype === v) || ""; // Il prototipo è quello di una classe 
+                        temp.push(`${
+                            typeof kS === "number"
+                            ? `[${ opts.val }[${ kS }]]`
+                            : this.key(k, true, this.def(kS, opts))
+                        }:${ opts.space }${ proto && "(" }${ this.parent.source(proto ? v.constructor : v, vS, opts, level + opts.tab + next) }${ proto && ").prototype" }`);
+                    }
                 }
             }
 
@@ -225,44 +234,14 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
             //[ Riferimenti circolari ]
             return !struct.cir.length
             ? out
-            : `(${ t }${ this.save(struct, opts) }${ out },${ t }${
+            : `(${ t }${ this.def(struct, opts) }${ out },${ t }${
                 struct
                 .cir
-                .map(x => `${ opts.val }[${ x.obj }]${ typeof x.kS === "number" ? `[${ opts.val }[${ x.kS }]]` : this.key(x.k, false, this.save(x.kS, opts)) }${ opts.space }=${ opts.space }${ opts.val }[${ struct.id }]`)
+                .map(x => `${ opts.val }[${ x.obj }]${ typeof x.kS === "number" ? `[${ opts.val }[${ x.kS }]]` : this.key(x.k, false, this.def(x.kS, opts)) }${ opts.space }=${ opts.space }${ opts.val }[${ struct.id }]`)
                 .join("," + t)
             }${ tl })`;
         }
     };
-
-    /**
-     * Return the structure object of "obj"
-     * @param {any} obj The object to scan
-     * @param {Object} opts An object containing the preferences of the scanning 
-     * @param {Object} gen An object that keep tracks of the ids of the repeating objects
-     * @param {Map<Object, Struct>} cache A map containing the structures of the traversed objects
-     * @returns The structure of "obj"
-     */
-    static from(obj, opts, gen, cache) {
-        for (const { value, done } of this.utils.wrap(this.utils.scan(obj, opts, gen, cache))) // Dovrebbe mandare 'false' a "next()", ma va bene uguale visto che anche undefined è falsy
-            if (done)
-                return value;
-    }
-
-    /**
-     * Stringifies an object given its structure
-     * This function do the reference checking for the "this.utils.stringify()" function
-     * @param {any} obj The object to stringify
-     * @param {Struct} struct The object representing the structure of "obj"
-     * @param {Object} opts An object containing the preferences of the conversion
-     * @param {String} level The tabs to put before each line
-     * @returns The stringified object
-     */
-    static stringify(obj, struct, opts, level) {
-        return typeof struct === "number"
-        ? `${ opts.val }[${ struct }]`
-        : `${ struct?.cir?.length ? "" : this.utils.save(struct, opts) }${ this.utils.stringify(obj, struct, opts, level) }`;
-        //    ↑ Senza questo i riferimenti li definiva FUORI dalle parenntesi tonde sugli oggetti
-    }
 
     /**
      * Like the "Struct" class but can be called as a function
@@ -272,29 +251,74 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
          * Convert an object to its source code and wraps it to make it valid everywhere
          * @param {Function} t The Target
          * @param {null} self The 
-         * @param {Array} args The object to save and the options
+         * @param {Array} args The object to save, the options and the starting level
          * @returns The stringified object
          */
-        apply(t, self, [ obj, opts = {} ]) {
+        apply(t, self, [ obj, opts = {}, level = "" ]) {
             //[ Default ]
             const pretty = opts.pretty = (opts.pretty ?? true) || "";
             opts.space = pretty && ((opts.space ?? " ") || "");
             opts.endl = pretty && ((opts.endl ?? "\n") || "");
             opts.tab = pretty && ((opts.tab ?? "\t") || "");
+            opts.method ??= true;
             opts.proto ??= true;
-            opts.safe ??= true;
-            opts.func ??= true;
             opts.val ??= "x";
 
             //[ Wrapping con funzione se serve la cache ]
             const temp = { i: 0 };
-            var out = t.stringify(obj, t.from(obj, opts, temp), opts);
-            if (opts.safe && out[0] == "{") out = `(${ out })`;
-            return opts.func && temp.i
+            var out = t.source(obj, t.scan(obj, opts, temp), opts, level);
+            if ((opts.safe ?? true) && out[0] == "{") out = `(${ out })`;
+            return (opts.func ?? true) && temp.i
             ? `(${ opts.val }${ opts.space }=>${ opts.space }${ out })({})`
             : out;
-        },
-
-        has: (t, k) => k in t
+        }
     });
+
+    /**
+     * Return the structure object of "obj"
+     * @param {any} obj The object to scan
+     * @param {Object} opts An object containing the preferences of the scanning 
+     * @param {Object} gen An object that keep tracks of the ids of the repeating objects
+     * @param {Map<Object, Struct>} cache A map containing the structures of the traversed objects
+     * @returns The structure of "obj"
+     */
+    static scan(obj, opts, gen, cache) {
+        for (const { value, done } of this.utils.wrap(this.utils.scan(obj, opts, gen, cache))) // Dovrebbe mandare 'false' a "next()", ma va bene uguale visto che anche undefined è falsy
+            if (done)
+                return value;
+    }
+
+    /**
+     * Stringifies an object given its structure
+     * This function do the reference checking for the "this.utils.source()" function
+     * @param {any} obj The object to stringify
+     * @param {Struct} struct The object representing the structure of "obj"
+     * @param {Object} opts An object containing the preferences of the conversion
+     * @param {String} level The tabs to put before each line
+     * @returns The stringified object
+     */
+    static source(obj, struct, opts = {}, level = "") {
+        return typeof struct === "number"
+        ? `${ opts.val }[${ struct }]`
+        : `${ struct?.cir?.length ? "" : this.utils.def(struct, opts) }${ this.utils.source(obj, struct, opts, level) }`;
+        //    ↑ Senza questo i riferimenti li definiva FUORI dalle parenntesi tonde sugli oggetti
+    }
+
+    /**
+     * Save to file
+     * @param {String} name The name of the file
+     * @param {any} obj The object to save
+     * @param {Object} opts The preferences of the conversion
+     * @returns Whatever "fs.writeFileSync()" returns
+     */
+    static write(name, obj, opts = {}) {
+        const fs = require("fs");
+        if (opts.conv ?? true) obj = this(obj, opts);
+        return fs.writeFileSync(name, `${ opts.export ?? `module.exports${ opts.space ??= " " }=${ opts.space }` }${ obj };`);
+    }
+
+    /**
+     * Uneval the uneval!
+     */
+    static toString = () => `${ Function.prototype.toString.apply(this) }.uneval`;
 }.uneval;
