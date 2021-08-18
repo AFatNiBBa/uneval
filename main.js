@@ -1,17 +1,16 @@
 
 //[WIP]: {array,func}.prop(anche __proto__), {obj,array,func}.{get,set}, { "obj.func"(){} }(è dura)
-//[WIP]: Refactor in modo tale che si veda la documentazione (Tirare fuori dal proxy, o meglio, usa typescript)
 //[MAY]: (Trap)
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
 //[/!\]: Non viene cacheata la versione primitiva di un oggetto simbol (x[a]=Object(x[b]=Symbol("c")))
 
-//[WIP]: Spazio fine riga, Buffer, Global, Sparse array
+//[WIP]: Spazio fine riga
 
 /**
  * This implementation only works if the object keys are retrieved in the same order in which they are scanned, the "Map" object allows that
  * If a cache entry is empty is because is inside of a managed object's "__proto__"
  */
-module.exports = class Struct {
+var uneval = (typeof module === "undefined" ? {} : module).exports = class Struct {
     sub = new Map();
     cir = [];
     id = "";
@@ -59,7 +58,7 @@ module.exports = class Struct {
             {
                 const out = new (this.parent)();
                 cache.set(obj, out);
-                if (type === "object")
+                if (type === "object" && obj !== globalThis)
                 {
                     // [ Scanning 'Map' & 'Set' ]
                     if (obj instanceof Map || obj instanceof Set)
@@ -143,7 +142,7 @@ module.exports = class Struct {
             {
                 case "function": {
                     const out = obj.toString();
-                    return out.endsWith(" { [native code] }")
+                    return (out.endsWith(") { [native code] }") || out.endsWith(") { [Command Line API] }"))
                     ? `null${ opts.pretty && " /* Native Code */" }`
                     : out;
                 }
@@ -158,6 +157,8 @@ module.exports = class Struct {
                 case "object": return (
                     obj === null
                         ? "null"
+                    : obj === globalThis
+                        ? `globalThis`
                     : (obj instanceof String || obj instanceof Number || obj instanceof Boolean || obj instanceof Symbol || obj instanceof BigInt)
                         ? `Object(${ this.stringify(obj.valueOf(), struct, opts, level) })` //[/!\]: Non supporta (x[a]=Object(x[b]=Symbol("c")))
                     : obj instanceof Date
@@ -166,8 +167,10 @@ module.exports = class Struct {
                         ? `new ${ obj.constructor.name }(${ this.stringify(struct.value, struct, opts, level) })`
                     : obj instanceof RegExp
                         ? obj.toString()
+                    : (typeof Buffer !== "undefined" && obj instanceof Buffer)
+                        ? `Buffer.from(${ this.stringify(obj.toString("base64"), struct, opts, level) },${ opts.space }"base64")`
                         : this.nested(obj, struct, opts, level)
-                )
+                );
                 case "undefined":   return "undefined";
                 case "number":      return Object.is(obj, -0) ? "-0" : (obj + "");
                 case "bigint":      return obj + "n";
@@ -195,7 +198,11 @@ module.exports = class Struct {
             const temp = [];
             if (isArray) 
             for (let i = 0; i < obj.length; i++)
-                temp.push(struct.sub.has(i + "") ? this.parent.stringify(obj[i], struct.sub.get(i + "")[1], opts, level + opts.tab + next) : "null"); // Prima di essere cercati all'interno di "struct.sub", gli indici devono essere convertiti in stringa
+                if (struct.sub.has(i + "")) // Prima di essere cercati all'interno di "struct.sub", gli indici devono essere convertiti in stringa
+                    temp.push(this.parent.stringify(obj[i], struct.sub.get(i + "")[1], opts, level + opts.tab + next));
+                else if (temp.length && (!temp[temp.length - 1] || temp[temp.length - 1][0] === ",")) // Se una serie consecutiva di elementi non ci sono lascia una riga di virgole
+                    temp[temp.length - 1] += ",";
+                else temp.push("");
             else
             {
                 for (const [ k, [ kS, vS ] ] of struct.sub)
@@ -209,7 +216,7 @@ module.exports = class Struct {
                     }:${ opts.space }${ proto && "(" }${ this.parent.stringify(proto ? v.constructor : v, vS, opts, level + opts.tab + next) }${ proto && ").prototype" }`);
                 }
             }
-    
+
             //[ Oggetto ]                           ↓ Se l'oggetto è vuoto non va a capo
             const out = `${ isArray ? "[" : "{" }${ temp.length ? g : "" }${ temp.join("," + g) }${ temp.length ? gl : "" }${ isArray ? "]" : "}" }`
     
@@ -256,34 +263,28 @@ module.exports = class Struct {
     }
 
     /**
-     * Like the "Struct" class but can be called as a function
+     * Convert an object to its source code and wraps it to make it valid everywhere
+     * @param {any} obj The object to stringify
+     * @param {Object} opts An object containing the preferences of the conversion
+     * @returns The stringified object
      */
-    static uneval = new Proxy(this, {
-        /**
-         * Convert an object to its source code and wraps it to make it valid everywhere
-         * @param {Function} t The Target
-         * @param {null} self The 
-         * @param {Array} args The object to save and the options
-         * @returns The stringified object
-         */
-        apply(t, self, [ obj, opts = {} ]) {
-            //[ Default ]
-            const pretty = opts.pretty = (opts.pretty ?? true) || "";
-            opts.space = pretty && ((opts.space ?? " ") || "");
-            opts.endl = pretty && ((opts.endl ?? "\n") || "");
-            opts.tab = pretty && ((opts.tab ?? "\t") || "");
-            opts.proto ??= true;
-            opts.safe ??= true;
-            opts.func ??= true;
-            opts.val ??= "x";
+    static uneval = (obj, opts = {}) => {
+        //[ Default ]
+        const pretty = opts.pretty = (opts.pretty ?? true) || "";
+        opts.space = pretty && ((opts.space ?? " ") || "");
+        opts.endl = pretty && ((opts.endl ?? "\n") || "");
+        opts.tab = pretty && ((opts.tab ?? "\t") || "");
+        opts.proto ??= true;
+        opts.safe ??= true;
+        opts.func ??= true;
+        opts.val ??= "x";
 
-            //[ Wrapping con funzione se serve la cache ]
-            const temp = { i: 0 };
-            var out = t.stringify(obj, t.from(obj, opts, temp), opts);
-            if (opts.safe && out[0] == "{") out = `(${ out })`;
-            return opts.func && temp.i
-            ? `(${ opts.val } => ${ out })({})`
-            : out;
-        }
-    });
+        //[ Wrapping con funzione se serve la cache ]
+        const temp = { i: 0 };
+        var out = this.stringify(obj, this.from(obj, opts, temp), opts);
+        if (opts.safe && out[0] == "{") out = `(${ out })`;
+        return opts.func && temp.i
+        ? `(${ opts.val } => ${ out })({})`
+        : out;
+    };
 }.uneval;

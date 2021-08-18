@@ -1,6 +1,10 @@
 
 # uneval.js
 Convert an object to its source code (With circular references too!)
+Now even in the browser!
+```html
+<script src="https://cdn.jsdelivr.net/gh/AFatNiBBa/uneval/main.js"></script>
+```
 > Always update to the latest version to have more features! <br>
 > ```bash
 > npm r uneval.js & npm i uneval.js
@@ -75,7 +79,10 @@ The available options are
 ## Supported
 - All the things supported by json
 - Multiple references (Even in Symbol keys)
-- Circular references (Are much worse, trust me)
+- Circular references (Are much worse to implement, trust me)
+- Sparse arrays
+- Buffer (Only in node.js, not in Web)
+- The Global object
 - `undefined`
 - `-0`, `NaN`, `Infinity`, `-Infinity`
 - Symbols
@@ -87,21 +94,20 @@ The available options are
 - Dates
 - Boxed Primitives, like `new String("hello")`
 - Big Integers
-- `Object.create(null)`
+- Objects without a prototype
 - Custom types
 
 ## Unsupported (Or at least not completely)
 - Proxies (If you know how to extract the `[[Target]]` and the `[[Handler]]` of a proxy tell me)
 - Clojures (Functions that access external local variables)
+- Native functions
+- Command Line API functions (Web)
 
 ## Coming Soon (Hopefully) in order of probability
-1. Global
-2. Buffer
-3. Sparse arrays
-4. Arrays and Functions custom fields
-5. Non enumerable properties
-6. Getters and Setters
-7. New syntax for object's methods, like `{ func() {} }`
+1. Arrays and Functions custom fields
+2. Non enumerable properties
+3. Getters and Setters
+4. New syntax for object's methods, like `{ func() {} }`
 
 ## Known Problems
 - The references to a primitive version of a symbol are not detected
