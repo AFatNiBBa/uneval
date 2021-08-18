@@ -4,8 +4,6 @@
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
 //[/!\]: Non viene cacheata la versione primitiva di un oggetto simbol (x[a]=Object(x[b]=Symbol("c")))
 
-//[WIP]: Spazio fine riga
-
 /**
  * This implementation only works if the object keys are retrieved in the same order in which they are scanned, the "Map" object allows that
  * If a cache entry is empty is because is inside of a managed object's "__proto__"
@@ -189,10 +187,10 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
         nested(obj, struct, opts, level) {
             const isArray = obj instanceof Array;
             const next = struct.cir.length ? opts.tab : "";
-            const tl = opts.endl + level;   // Tonda (Ultima)
-            const t = tl + opts.tab;        // Tonda
-            const gl = tl + next;           // Graffa (Ultima)
-            const g = gl + opts.tab;        // Graffa
+            const tl = opts.endl + level;       // Tonda (Ultima)
+            const t = tl + opts.tab;            // Tonda
+            const gl = opts.space + tl + next;  // Graffa (Ultima)
+            const g = gl + opts.tab;            // Graffa
             
             //[ Sotto valori ]
             const temp = [];
