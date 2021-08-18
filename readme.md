@@ -1,6 +1,6 @@
 
 # uneval.js
-Convert an object to its source code (With circular references too!)
+Convert an object to its source code (With circular references too!) <br>
 Now even in the browser!
 ```html
 <script src="https://cdn.jsdelivr.net/gh/AFatNiBBa/uneval/main.js"></script>
