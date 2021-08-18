@@ -284,7 +284,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
         var out = this.stringify(obj, this.from(obj, opts, temp), opts);
         if (opts.safe && out[0] == "{") out = `(${ out })`;
         return opts.func && temp.i
-        ? `(${ opts.val } => ${ out })({})`
+        ? `(${ opts.val }${ opts.space }=>${ opts.space }${ out })({})`
         : out;
     };
 }.uneval;
