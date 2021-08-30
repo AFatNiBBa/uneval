@@ -4,7 +4,7 @@
   "description": "Convert an object to its source code (With references too!)",
   "main": "main.js",
   "scripts": {
-    "publish": "echo npm publish & push"
+    "publish": "npm publish & push"
   },
   "keywords": [
     "uneval",
