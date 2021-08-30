@@ -8,6 +8,7 @@
  * If a cache entry is empty is because is inside of a managed object's "__proto__"
  */
 var uneval = (typeof module === "undefined" ? {} : module).exports = class Struct {
+    value; // Eventuale "Struct" della scannerizzazione dell'oggetto che deve rappresentare il corrente
     sub = new Map();
     cir = [];
     id = "";
@@ -60,12 +61,12 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = class Struc
                 {
                     //[ Eccezioni ]
                     if (obj instanceof Symbol) // Scan parte primitiva
-                        out.value = this.parent.scan(obj.valueOf(), opts, gen, cache);
-                    else if (obj instanceof Map || obj instanceof Set)
+                        out.value = this.parent.scan(obj.valueOf(), opts, gen, cache); // Tanto non ha sotto-proprietà da salvare un simbolo
+                    else if (global.abracadabra = obj instanceof Map || obj instanceof Set)
                         out.value = obj = [ ...obj ];
                     
                     // [ Scanning sotto proprietà ]
-                    else for (let k of Reflect.ownKeys(obj).concat("__proto__"))
+                    for (let k of Reflect.ownKeys(obj).concat("__proto__"))
                     {
                         let v = obj[k], temp = [];
                         if (k === "__proto__")

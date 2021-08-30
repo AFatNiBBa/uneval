@@ -1,10 +1,10 @@
 {
   "name": "uneval.js",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Convert an object to its source code (With references too!)",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "publish": "echo npm publish & push %1"
   },
   "keywords": [
     "uneval",
