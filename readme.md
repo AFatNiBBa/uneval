@@ -77,7 +77,7 @@ The available options are:
     - Setting it to `false` is like setting it to `""`
     - It defaults to `"\t"`
 - **`method`**
-    - If is set to `false` allows only the safe, but way uglier, syntax of objects methods
+    - If is set to `false` allows only the safe, but way uglier, syntax for objects methods
     - It defaults to `true`
 - **`proto`**
     - Saves the class of objects (Including the `__proto__` property)
@@ -98,6 +98,7 @@ The available options are:
 - **`export`**
     - Only in the "write" function
     - The code that will be put in front of the object source
+    - If it is an object then the value of the property `pre` will be concatenated before the object while the value of `post` will be concatenated after
     - It defaults to `"module.exports = "`, the spaces will be the ones defined in the options
 
 Note that in every option which accepts a boolean you can put `0` to represent `false` and everything not "falsy" to represent `true`.
@@ -126,7 +127,6 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Big Integers
 - Objects with a `null` prototype
 - Custom types
-- The module itself 😳
 
 ## Unsupported (Or at least not completely)
 - Proxies (If you know how to extract the `[[Target]]` and the `[[Handler]]` of a proxy tell me)
