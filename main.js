@@ -3,7 +3,6 @@
 //[MAY]: Refactor modulare per supporto serializzazioni personalizzate
     //[WIP]: Funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()")
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
-//[OK]: Refactor, Fixed(Symbol(Symbol.iterator.description) => Symbol.iterator), Fixed({__proto__:null} => {__proto__:undefined})
 
 var uneval = (typeof module === "undefined" ? {} : module).exports = (() => {
 
@@ -28,8 +27,8 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (() => {
         //[ Wrapping con funzione se serve la cache ]
         const temp = { i: 0 };
         var out = uneval.source(obj, uneval.scan(obj, opts, temp), opts, level);
-        if ((opts.safe ?? true) && out[0] == "{") out = `(${ out })`;
-        return (opts.func ?? true) && temp.i
+        if (out[0] == "{" && ((opts.safe ?? true) || (temp.i && (opts.func ??= true)))) out = `(${ out })`;
+        return opts.func && temp.i
         ? `(${ opts.val }${ opts.space }=>${ opts.space }${ out })({})`
         : out;
     }

@@ -1,9 +1,13 @@
 
 # uneval.js
 Convert an object to its source code (With circular references too!) <br>
-Now even in the browser!
+Now even in the browser! Just add this to your HTML code...
 ```html
 <script src="https://cdn.jsdelivr.net/gh/AFatNiBBa/uneval@latest/main.js"></script>
+```
+...or this to your JavaScript
+```js
+document.head.append(Object.assign(document.createElement("script"), { src: "https://cdn.jsdelivr.net/gh/AFatNiBBa/uneval@latest/main.js" }));
 ```
 > Always update to the latest version to have more features and bug fixes! <br>
 > ```bash
@@ -84,6 +88,7 @@ The available options are:
     - It defaults to `true`
 - **`safe`**
     - Wraps object literals in brackets to not confuse them with blocks
+    - It's always `true` if the object is in the wrapper function
     - It defaults to `true`
 - **`func`**
     - Put the top object in a function that defines the cache variable
