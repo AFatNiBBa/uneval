@@ -4,7 +4,7 @@
     //[WIP]: Funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()")
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
 
-var uneval = (typeof module === "undefined" ? {} : module).exports = (() => {
+var uneval = (typeof module === "undefined" ? {} : module).exports = (function () {
 
     /**
      * Convert an object to its source code.
@@ -22,12 +22,14 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (() => {
         opts.tab = pretty && ((opts.tab ?? "\t") || "");
         opts.method ??= true;
         opts.proto ??= true;
+        opts.safe ??= true;
+        opts.func ??= true;
         opts.val ??= "x";
 
         //[ Wrapping con funzione se serve la cache ]
         const temp = { i: 0 };
         var out = uneval.source(obj, uneval.scan(obj, opts, temp), opts, level);
-        if (out[0] == "{" && ((opts.safe ?? true) || (temp.i && (opts.func ??= true)))) out = `(${ out })`;
+        if (out[0] == "{" && (opts.safe || (temp.i && opts.func))) out = `(${ out })`;
         return opts.func && temp.i
         ? `(${ opts.val }${ opts.space }=>${ opts.space }${ out })({})`
         : out;
@@ -91,6 +93,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (() => {
     //[ Export ]
     return Object.assign(uneval, {
         uneval, write, source, scan,
+        toString: () => arguments.callee.toString(),
 
         /**
          * Core functions and values that make "uneval()" work.

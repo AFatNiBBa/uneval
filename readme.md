@@ -132,6 +132,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Big Integers
 - Objects with a `null` prototype
 - Custom types
+- The module itself 😳
 
 ## Unsupported (Or at least not completely)
 - Proxies (If you know how to extract the `[[Target]]` and the `[[Handler]]` of a proxy tell me)
