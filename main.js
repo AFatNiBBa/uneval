@@ -1,5 +1,6 @@
 
 //[WIP]: {array,func(fa attenzione al test per method)}.prop(anche __proto__, problema simboli), {obj,array,func}.{get,set}
+//[WIP]: class Circular
 //[MAY]: Refactor modulare per supporto serializzazioni personalizzate
     //[WIP]: Funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()")
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
@@ -93,7 +94,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
     //[ Export ]
     return Object.assign(uneval, {
         uneval, write, source, scan,
-        toString: () => arguments.callee.toString(),
+        toString: () => `(${ arguments.callee })()`,
 
         /**
          * Core functions and values that make "uneval()" work.
@@ -238,7 +239,9 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                         const out = obj.toString();
                         return (
                             (out.endsWith(") { [native code] }") || out.endsWith(") { [Command Line API] }"))
-                                ? `null${ opts.pretty && " /* Native Code */" }`
+                                ? globalThis[obj.name] === obj
+                                    ? `globalThis${ this.key(obj.name) }`
+                                    : `null${ opts.pretty && " /* Native Code */" }`
                             : this.method.test(out)
                                 ? `(x=>x[Reflect.ownKeys(x)[0]])({${ out }})`
                                 : out

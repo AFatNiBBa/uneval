@@ -122,6 +122,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Symbols
 - Symbol keys
 - Functions
+- Global native (and command line API) functions
 - Regular Expressions
 - Maps
 - Sets
@@ -143,11 +144,11 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     >     [`val${ index }`]() {
     >         return 1;
     >     }
-    > })
+    > });
     > ```
     > ...you have to be carefull with what is inside the computed field too, unless you set the `method` option to `false` or the function is reference elsewhere
-- Native functions
-- Command Line API functions (Web)
+- Native functions (If not global)
+- Command Line API functions (Web) (If not global)
 
 ## Future Support (Hopefully) in order of probability
 1. Arrays and Functions custom fields
