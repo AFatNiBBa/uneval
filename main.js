@@ -1,6 +1,5 @@
 
 //[WIP]: {array,func(fa attenzione al test per method)}.prop(anche __proto__, problema simboli), {obj,array,func}.{get,set}
-//[WIP]: class Circular
 //[MAY]: Refactor modulare per supporto serializzazioni personalizzate
     //[WIP]: Funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()")
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
@@ -77,18 +76,65 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
 
     /**
      * Return the structure object of "obj".
-     * This function is like "uneval.utils.scan()" but skips the circular reference checks.
      * @param {any} obj The object to scan
      * @param {Object} opts An object containing the preferences of the scanning 
      * @param {Object} gen An object that keep tracks of the ids of the repeating objects
      * @param {Map<Object, Struct>} cache A map containing the structures of the traversed objects
+     * @param {Function} next A way for the function to communicate to the parent call (About circular references)
      * @returns The structure of "obj"
      */
-    function scan(obj, opts, gen, cache)
+    function scan(obj, opts = {}, gen = { i: 0 }, cache = new Map(), next)
     {
-        for (const { value, done } of uneval.utils.wrap(uneval.utils.scan(obj, opts, gen, cache))) // Dovrebbe mandare 'false' a "next()", ma va bene uguale visto che anche undefined è falsy
-            if (done)
-                return value;
+        const type = typeof obj, { utils } = uneval;
+        if (obj === null || (type !== "object" && type !== "function" && type !== "symbol"))
+            return null;
+        if(cache.has(obj))
+            //[ Riferimento multiplo ]
+            return cache.get(obj).ref(gen);
+        else
+        {
+            const out = new utils.Struct();
+            cache.set(obj, out);
+            if (type === "object" && obj !== globalThis)
+            {
+                //[ Eccezioni ]
+                if (obj instanceof Symbol) // Scan parte primitiva
+                    out.value = uneval.scan(obj.valueOf(), opts, gen, cache); // Non serve "next", Tanto non ha sotto-proprietà da salvare un simbolo
+                else if (obj instanceof Map || obj instanceof Set)
+                    out.value = obj = [ ...obj ];
+                
+                // [ Scanning sotto proprietà ]
+                for (let k of Reflect.ownKeys(obj).concat("__proto__"))
+                {
+                    //[ Prototipo ]
+                    let v = obj[k];
+                    if (k === "__proto__")
+                        if (!opts.proto || utils.managedProtos.has(v))
+                            continue;
+                        else if (v && v?.constructor?.prototype === v) // Il prototipo è quello di una classe 
+                            v = v.constructor;
+
+                    //[ Riferimento Circolare ]
+                    const temp = [ k, v ].map(x => 
+                        uneval.scan(x, opts, gen, cache, cir =>
+                            cir.outer === obj
+                            ? (
+                                cir.inner = cir.inner.ref(gen),
+                                out.cir.push(cir),
+                                delete cir.outer
+                            )
+                            : next?.(cir)
+                        )
+                    );
+                    
+                    //[ Autoriferimento ]
+                    if (v === obj) out.cir.push(new utils.Circular(k, temp[0], out.ref(gen)));
+                    else if (next?.(new utils.Circular(k, temp[0], out, v)));
+                    else out.sub.set(k, temp); // La chiave viene salvata solo se non si tratta di un riferimento circolare
+                }
+            }
+            return out;
+        }
     }
 
     //[ Export ]
@@ -109,119 +155,22 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
              * If a cache entry is empty is because is inside of a managed object's "__proto__".
              */
             Struct: class {
-                value; // Eventuale "Struct" della scannerizzazione dell'oggetto che deve rappresentare il corrente
-                sub = new Map();
-                cir = [];
-                id = "";
+                value;              // Eventuale valore che rappresenterà il corrente
+                sub = new Map();    // Oggetto che mappa le proprietà dell'oggetto con una coppia di oggetti che rappresentano la struttura rispettivamente della chiave e del valore della proprietà
+                cir = [];           // Lista dei riferimenti circolari che fanno riferimento all'oggetto
+                id = "";            // Eventuale indice dell'oggetto al interno della cache
                 ref(gen) { return this.id ||= ++gen.i; }
             },
-    
+
             /**
-             * Wraps a generator with an other generator that allows you to receive not only the "value", but the "done" and the return value too.
-             * @param {Generator} iter The generator
+             * An object containing the informations about a circular reference
              */
-            *wrap(iter) {
-                var out, temp;
-                while(!(out = iter.next(temp)).done)
-                {
-                    temp = undefined;
-                    out.next = x => temp = x;
-                    yield out;
-                }
-                yield out;
-            },
-        
-            /**
-             * Return the structure object of "obj".
-             * @param {any} obj The object to scan
-             * @param {Object} opts An object containing the preferences of the scanning 
-             * @param {Object} gen An object that keep tracks of the ids of the repeating objects
-             * @param {Map<Object, Struct>} cache A map containing the structures of the traversed objects
-             * @yields Objects containing the current object, a key and its struct and a value, those objects have to be checked against parent call's "obj" for circular references
-             * @returns The structure of "obj"
-             */
-            *scan(obj, opts = {}, gen = { i: 0 }, cache = new Map()) {
-                const type = typeof obj;
-                if (obj === null || (type !== "object" && type !== "function" && type !== "symbol"))
-                    return null;
-                if(cache.has(obj))
-                    //[ Riferimento multiplo ]
-                    return cache.get(obj).ref(gen);
-                else
-                {
-                    const out = new (this.Struct)();
-                    cache.set(obj, out);
-                    if (type === "object" && obj !== globalThis)
-                    {
-                        //[ Eccezioni ]
-                        if (obj instanceof Symbol) // Scan parte primitiva
-                            out.value = this.parent.scan(obj.valueOf(), opts, gen, cache); // Tanto non ha sotto-proprietà da salvare un simbolo
-                        else if (obj instanceof Map || obj instanceof Set)
-                            out.value = obj = [ ...obj ];
-                        
-                        // [ Scanning sotto proprietà ]
-                        for (let k of Reflect.ownKeys(obj).concat("__proto__"))
-                        {
-                            let v = obj[k], temp = [];
-                            if (k === "__proto__")
-                                if (!opts.proto || this.managedProtos.has(v))
-                                    continue;
-                                else if (v && v?.constructor?.prototype === v) // Il prototipo è quello di una classe 
-                                    v = v.constructor;
-    
-                            //[ Riferimento Circolare ]
-                            for (const x of [ k, v ])
-                                for (const { value, done, next } of this.wrap(this.scan(x, opts, gen, cache)))
-                                    if (done)
-                                        temp.push(value);
-                                    else if (value.v === obj)
-                                    {
-                                        next(true);
-                                        delete value.v;
-                                        value.obj = value.obj.ref(gen);
-                                        out.cir.push(value);
-                                    }
-                                    else next(yield value);
-                            
-                            //[ Autoriferimento ]
-                            if (v === obj) out.cir.push({ obj: out.ref(gen), k, kS: temp[0] });
-                            else if (yield { obj: out, k, v, kS: temp[0] });
-                            else out.sub.set(k, temp); // La chiave viene salvata solo se non si tratta di un riferimento circolare
-                        }
-                    }
-                    return out;
-                }
-            },
-    
-            /**
-             * Returns the best code to define a key in an obejct.
-             * @param {String|Symbol} str The key to define
-             * @param {Boolean} obj True if is to define inside of an object, False if is outside
-             * @param {String} val Eventual code to put inside the square brackets of a symbol key definition
-             * @returns The code of the key
-             */
-            key(str, obj = false, val = "") {
-                return typeof str === "symbol"
-                ? `[${ val }${ this.parent.source(str, null) }]`
-                : (
-                    str.match(/^[A-Za-z$_][0-9A-Za-z$_]*$/) 
-                    ? (obj ? str : "." + str)
-                    : (
-                        str.match(/^[0-9]+$/)
-                        ? (obj ? str : `[${ str }]`)
-                        : (obj ? JSON.stringify(str) : `[${ JSON.stringify(str) }]`)
-                    )
-                );
-            },
-    
-            /**
-             * Eventually caches a reference.
-             * @param {Struct} struct The structure of the object
-             * @param {Object} opts An object containing the preferences of the conversion
-             * @returns The code to save the object to the cache
-             */
-            def(struct, opts) {
-                return (struct?.id || "") && (`${ opts.val }[${ struct.id }]${ opts.space }=${ opts.space }`);
+            Circular: class {
+                key;                // La chiave della proprietà di "inner" che contiene "outer"
+                struct;             // Oggetto che rappresenta la struttura di "key"
+                inner;              // Struct del oggetto interno che contiene un riferimento ad un oggetto esterno
+                outer;              // Oggetto esterno
+                constructor(key, struct, inner, outer) { this.key = key; this.struct = struct; this.inner = inner; this.outer = outer }
             },
     
             /**
@@ -338,9 +287,40 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                 : `(${ t }${ this.def(struct, opts) }${ out },${ t }${
                     struct
                     .cir
-                    .map(x => `${ opts.val }[${ x.obj }]${ typeof x.kS === "number" ? `[${ opts.val }[${ x.kS }]]` : this.key(x.k, false, this.def(x.kS, opts)) }${ opts.space }=${ opts.space }${ opts.val }[${ struct.id }]`)
+                    .map(x => `${ opts.val }[${ x.inner }]${ typeof x.struct === "number" ? `[${ opts.val }[${ x.struct }]]` : this.key(x.key, false, this.def(x.struct, opts)) }${ opts.space }=${ opts.space }${ opts.val }[${ struct.id }]`)
                     .join("," + t)
                 }${ tl })`;
+            },
+
+            /**
+             * Returns the best code to define a key in an obejct.
+             * @param {String|Symbol} str The key to define
+             * @param {Boolean} obj True if is to define inside of an object, False if is outside
+             * @param {String} val Eventual code to put inside the square brackets of a symbol key definition
+             * @returns The code of the key
+             */
+            key(str, obj = false, val = "") {
+                return typeof str === "symbol"
+                ? `[${ val }${ this.parent.source(str, null) }]`
+                : (
+                    str.match(/^[A-Za-z$_][0-9A-Za-z$_]*$/) 
+                    ? (obj ? str : "." + str)
+                    : (
+                        str.match(/^[0-9]+$/)
+                        ? (obj ? str : `[${ str }]`)
+                        : (obj ? JSON.stringify(str) : `[${ JSON.stringify(str) }]`)
+                    )
+                );
+            },
+    
+            /**
+             * Eventually caches a reference.
+             * @param {Struct} struct The structure of the object
+             * @param {Object} opts An object containing the preferences of the conversion
+             * @returns The code to save the object to the cache
+             */
+            def(struct, opts) {
+                return (struct?.id || "") && (`${ opts.val }[${ struct.id }]${ opts.space }=${ opts.space }`);
             }
         }
     });
