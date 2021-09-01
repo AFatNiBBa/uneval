@@ -165,3 +165,12 @@ Note that in every option which accepts a boolean you can put `0` to represent `
         b: a.b
     }))); // { a: 2021-08-16T02:57:10.125Z, b: undefined }
     ```
+- If a sparse array is completely empty the generated object will have the length decreased by 1
+    ```js
+    const a = [];
+    a.length = 3;
+    console.log(
+        a.length,
+        eval(uneval(a)).length
+    ); // 3 2
+    ```

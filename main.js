@@ -2,7 +2,7 @@
 //[WIP]: {array,func(fa attenzione al test per method)}.prop(anche __proto__, problema simboli), {obj,array,func}.{get,set}
     //[WIP]: Nested => Definizione gestita dell'oggetto + quella non gestita se esiste
     //[WIP]: Estrai il riferimento circolare
-//[MAY]: Remove "uneval.utils.def()"
+//[MAY]: Remove "uneval.utils.def()" e refactor simili
 //[MAY]: Refactor modulare per supporto serializzazioni personalizzate
     //[WIP]: Funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()")
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
