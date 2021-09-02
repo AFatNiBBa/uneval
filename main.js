@@ -6,7 +6,7 @@
 //[MAY]: Refactor modulare per supporto serializzazioni personalizzate
     //[WIP]: Funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()")
 //[/!\]: Chiave in un oggetto gestito può definire un valore che non verrà cacheato
-//[/!\]: (b=[],b.length=12,eval(uneval(b)).length)===11 => += ","
+//[/!\]: (b=[],b.length=12,eval(uneval(b)).length)===11
 
 var uneval = (typeof module === "undefined" ? {} : module).exports = (function () {
 
@@ -152,20 +152,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
         utils: {
             parent: uneval,
             method: /^(async\s+)?([\["*]|(?!\(|function\W|class(?!\s*\()\W))/,
-            showFormatting: { space: "\x1b[101m \x1b[0m", tab: "\x1b[104m  \x1b[0m", endl: "\x1b[105m \n\x1b[0m" },
-            managedProtos: new Map([
-                [ globalThis.Buffer, x => uneval.utils.index(x) ],
-                [ Object ],
-                [ Array, x => x === "length" || uneval.utils.index(x) ],
-                [ Function, x => x === "length" || x === "name" ],
-                [ RegExp, x => x === "lastIndex" ], // Salvarla avrebbe senso
-                [ Date ],
-                [ String, x => x === "length" ],
-                [ Number ],
-                [ Boolean ],
-                [ Symbol ],
-                [ BigInt ]
-            ].map(x => (x[0] = (x[0] ?? Object).prototype, x))),
+            managedProtos: new Set([ Object, Array, Function, RegExp, Date, String, Number, Boolean, Symbol, BigInt, globalThis.Buffer ].map(x => (x ?? Object).prototype)),
 
             /**
              * An object representing the structure of another.
@@ -189,62 +176,6 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                 outer;              // Oggetto esterno
                 constructor(key, struct, inner, outer) { this.key = key; this.struct = struct; this.inner = inner; this.outer = outer }
             },
-
-            /**
-             * Returns the best code to define a key in an obejct.
-             * @param {String|Symbol} str The key to define
-             * @param {Boolean} obj True if is to define inside of an object, False if is outside
-             * @param {String} val Eventual code to put inside the square brackets of a symbol key definition
-             * @returns The code of the key
-             */
-            key(str, obj = false, val = "") {
-                return typeof str === "symbol"
-                ? `[${ val }${ this.parent.source(str, null) }]`
-                : (
-                    str.match(/^[A-Za-z$_][0-9A-Za-z$_]*$/) 
-                    ? (obj ? str : "." + str)
-                    : (
-                        str.match(/^[0-9]+$/)
-                        ? (obj ? str : `[${ str }]`)
-                        : (obj ? JSON.stringify(str) : `[${ JSON.stringify(str) }]`)
-                    )
-                );
-            },
-    
-            /**
-             * Eventually caches a reference.
-             * @param {Struct} struct The structure of the object
-             * @param {Object} opts An object containing the preferences of the conversion
-             * @returns The code to save the object to the cache
-             */
-            def(struct, opts) {
-                return (struct?.id || "") && (`${ opts.val }[${ struct.id }]${ opts.space }=${ opts.space }`);
-            },
-
-            /**
-             * Get if "key" would be put in in the array part or the object part of an array
-             * @param {String|Symbol|Number} key The value to check
-             * @returns If "key" is an array key
-             */
-            index(key) {
-                const temp = [];
-                temp[key] = 1;
-                return temp.length;
-            },
-
-            /**
-             * Creates a set of formatting strings
-             * @param {Object} opts An object containing the preferences of the conversion
-             * @param {String} level The tabs to put before each line
-             * @returns The formatting strings
-             */
-            indent(opts, level = "") {
-                const full = opts.space + opts.endl + level;
-                return {
-                    full,
-                    last: full + opts.tab
-                };
-            },
     
             /**
              * Stringifies an object or a primitive.
@@ -257,6 +188,18 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             source(obj, struct, opts = {}, level = "") {
                 switch(typeof obj)
                 {
+                    case "function": {
+                        const out = obj.toString();
+                        return (
+                            (out.endsWith(") { [native code] }") || out.endsWith(") { [Command Line API] }"))
+                                ? globalThis[obj.name] === obj
+                                    ? `globalThis${ this.key(obj.name) }`
+                                    : `null${ opts.pretty && " /* Native Code */" }`
+                            : this.method.test(out)
+                                ? `(x=>x[Reflect.ownKeys(x)[0]])({${ out }})`
+                                : out
+                        );
+                    }
                     case "symbol": {
                         const temp = obj.description;
                         return Symbol.for(temp) === obj
@@ -265,7 +208,6 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                             ? temp
                             : `Symbol(${ JSON.stringify(temp) })`;
                     }
-                    case "function":
                     case "object": return (
                         obj === null
                             ? "null"
@@ -303,10 +245,10 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             nested(obj, struct, opts, level) {
                 const isArray = obj instanceof Array;
                 const next = struct.cir.length ? opts.tab : "";
-                const tl = opts.space + opts.endl + level;  // Tonda (Ultima)
-                const t = tl + opts.tab;                    // Tonda
-                const gl = tl + next;                       // Graffa (Ultima)
-                const g = gl + opts.tab;                    // Graffa
+                const tl = opts.endl + level;       // Tonda (Ultima)
+                const t = tl + opts.tab;            // Tonda
+                const gl = opts.space + tl + next;  // Graffa (Ultima)
+                const g = gl + opts.tab;            // Graffa
                 
                 //[ Sotto valori ]
                 const temp = [];
@@ -355,38 +297,34 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             },
 
             /**
-             * Nested object types (Objects and Arrays, Function) with special notation
+             * Returns the best code to define a key in an obejct.
+             * @param {String|Symbol} str The key to define
+             * @param {Boolean} obj True if is to define inside of an object, False if is outside
+             * @param {String} val Eventual code to put inside the square brackets of a symbol key definition
+             * @returns The code of the key
              */
-            _nested: {
-                parent: uneval,
-
-                circular() {
-                    // TONDE
-                },
-
-                object() {
-                    // OGGETTo
-                },
-
-                array() {
-                    // [Object.assign(] ARRAY [, OGGETTO)]
-                },
-
-                //[WIP]: FORSE MEGLIO NORM FUNCTION QUI E NORM ARRAY SOPRA E SEMPLICEMENTE OBJECT GESTISCE IL RESTO; FORSE CON UNA FUNZIONE ASSIGN(O CHIAMATA NESTED)
-                function(obj, struct, opts, level) {
-                    // [Object.assign(] FUNC [, OGGETTO)]
-                    const fmt = this.parent.utils.indent(opts);
-                    const out = obj.toString();
-                    return (
-                        (out.endsWith(") { [native code] }") || out.endsWith(") { [Command Line API] }"))
-                            ? globalThis[obj.name] === obj
-                                ? `globalThis${ this.key(obj.name) }`
-                                : `null${ opts.pretty && " /* Native Code */" }`
-                        : this.method.test(out)
-                            ? `(x=>x[Reflect.ownKeys(x)[0]])({${ out }})`
-                            : out
-                    );
-                }
+            key(str, obj = false, val = "") {
+                return typeof str === "symbol"
+                ? `[${ val }${ this.parent.source(str, null) }]`
+                : (
+                    str.match(/^[A-Za-z$_][0-9A-Za-z$_]*$/) 
+                    ? (obj ? str : "." + str)
+                    : (
+                        str.match(/^[0-9]+$/)
+                        ? (obj ? str : `[${ str }]`)
+                        : (obj ? JSON.stringify(str) : `[${ JSON.stringify(str) }]`)
+                    )
+                );
+            },
+    
+            /**
+             * Eventually caches a reference.
+             * @param {Struct} struct The structure of the object
+             * @param {Object} opts An object containing the preferences of the conversion
+             * @returns The code to save the object to the cache
+             */
+            def(struct, opts) {
+                return (struct?.id || "") && (`${ opts.val }[${ struct.id }]${ opts.space }=${ opts.space }`);
             }
         }
     });
