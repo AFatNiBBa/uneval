@@ -4,15 +4,6 @@
     [WIP]: refactor modulare per supporto serializzazioni personalizzate
         [WIP]: funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()")
     [/!\]: le proprietà gestite di oggetti gestiti non vengono salvate anche se sovrascritte dall'utente
-
-    [***]: delegate delle funzioni
-    [***]: aggiornato utils.method contro le lambda monoparametro "x => {}"
-    [***]: errore funzione nominata top level
-    [***]: errore array completamente vuoti
-    [***]: cambiata visualizzazione array sparsi
-    [***]: proprietà customizzate oggetti gestiti
-    [***]: Cambiata gestione proto
-    [***]: Null proto cool syntax
 */
 
 var uneval = (typeof module === "undefined" ? {} : module).exports = (function () {

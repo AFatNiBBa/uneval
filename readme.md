@@ -157,7 +157,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 2. Getters and Setters
 
 ## Known Problems
-- On an object of a special class, if you add a custom property with a key which is one of those that the special class uses by default, then that property may be skipped (Look at `[ ...uneval.utils.managedProtos.keys() ].map(x => x.constructor.name)` for a full list)
+- On an object of a special class, if you add a custom property with a key which is one of those that the special class uses by default, then that property may be skipped (Look at <br> `[ ...uneval.utils.managedProtos.keys() ].map(x => x.constructor.name)` <br> for a full list)
     ```js
     const a = function b() {};
     a.name = { a: 1 };
