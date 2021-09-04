@@ -1,8 +1,8 @@
 {
   "name": "uneval.js",
-  "version": "2.8.3",
+  "version": "3.0.0",
   "description": "Convert an object to its source code (With references too!)",
-  "main": "main.js",
+  "main": "prv_test.js",
   "scripts": {
     "save": "npm publish & push"
   },

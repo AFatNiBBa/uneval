@@ -9,7 +9,7 @@ Now even in the browser! Just add this to your HTML code...
 ```js
 document.head.append(Object.assign(document.createElement("script"), { src: "https://cdn.jsdelivr.net/gh/AFatNiBBa/uneval@latest/main.js" }));
 ```
-> Always update to the latest version to have more features and bug fixes! <br>
+> Always update to the latest version to have more features and bug fixes (A looot of bug fixes!) <br>
 > ```bash
 > npm r uneval.js & npm i uneval.js
 > ```
@@ -146,31 +146,20 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     >     }
     > });
     > ```
-    > ...you have to be carefull with what is inside the computed field too, unless you set the `method` option to `false` or the function is reference elsewhere
-- Native functions (If not global)
-- Command Line API functions (Web) (If not global)
+    > ...you have to be carefull with what is inside the computed field too.
+    > To avoid this problem simply set the `method` option to `false`, this will use the (ugly) safe syntax, if the function is referenced elsewhere is used by default.
+    > If a value is defined inside a non-safe method it will not be saved, additionally if it is the first time you include it all other references will be `undefined`
+- Native functions and Command Line API functions (Web) (If not global), and their eventual user defined custom properties
+- Class static properties or prototype properties that are not defined in the class source
 
 ## Future Support (Hopefully) in order of probability
-1. Arrays and Functions custom fields
-2. Non enumerable properties
-3. Getters and Setters
+1. Custom conversions
+2. Getters and Setters
 
 ## Known Problems
-- If an object of special type (Such as `Array`, `String`, `Date`, ...) contains the first reference to an other object, that object will become undefined everywhere
+- On an object of a special class, if you add a custom property with a key which is one of those that the special class uses by default, then that property may be skipped (Look at `[ ...uneval.utils.managedProtos.keys() ].map(x => x.constructor.name)` for a full list)
     ```js
-    const a = new Date();
-    a.b = {};
-    console.log(eval(uneval({
-        a,
-        b: a.b
-    }))); // { a: 2021-08-16T02:57:10.125Z, b: undefined }
-    ```
-- If a sparse array is completely empty the generated object will have the length decreased by 1
-    ```js
-    const a = [];
-    a.length = 3;
-    console.log(
-        a.length,
-        eval(uneval(a)).length
-    ); // 3 2
+    const a = function b() {};
+    a.name = { a: 1 };
+    console.log(eval(uneval(a)).name); // b
     ```
