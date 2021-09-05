@@ -1,6 +1,6 @@
 
 # uneval.js
-Convert an object to its source code (With circular references too!) <br>
+Convert an object to its source code (With circular references and **PROXIES** too!) <br>
 Now even in the browser! Just add this to your HTML code...
 ```html
 <script src="https://cdn.jsdelivr.net/gh/AFatNiBBa/uneval@latest/main.js"></script>
@@ -64,6 +64,7 @@ module.exports = [
 
 ## Options
 Additionally to the object to stringify you can pass an option object to personalize your output.
+The option object will change during the process, it is advised that you don't use it elsewhere.
 The available options are:
 - **`pretty`**
     - Setting it to `false` deactivates `space`, `endl` and `tab`
@@ -83,6 +84,9 @@ The available options are:
 - **`method`**
     - If is set to `false` allows only the safe, but way uglier, syntax for objects methods
     - It defaults to `true`
+- **`proxy`**
+    - If it is set to `true` stringifies proxies as they really are
+    - It defaults to `true` (In the browser it is always counted as `false` because it uses things that are only in node)
 - **`proto`**
     - Saves the class of objects (Including the `__proto__` property)
     - It defaults to `true`
@@ -116,6 +120,8 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Sparse arrays
 - Buffer
     > Only in node.js, not in Web
+- Proxies
+    > Only in node.js, not in Web
 - The Global object
 - `undefined`
 - `-0`, `NaN`, `Infinity`, `-Infinity`
@@ -136,7 +142,6 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - The module itself 😳
 
 ## Unsupported (Or at least not completely)
-- Proxies (If you know how to extract the `[[Target]]` and the `[[Handler]]` of a proxy tell me)
 - Clojures (Functions that access external local variables)
     > If you create a function with the new object method syntax and a computed key...
     > ```js
@@ -154,7 +159,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 
 ## Future Support (Hopefully) in order of probability
 1. Custom conversions
-2. Getters and Setters
+2. Getters and Setters (Now are counted as normal properties)
 
 ## Known Problems
 - On an object of a special class, if you add a custom property with a key which is one of those that the special class uses by default, then that property may be skipped (Look at <br> `[ ...uneval.utils.managedProtos.keys() ].map(x => x.constructor.name)` <br> for a full list)
@@ -162,4 +167,10 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     const a = function b() {};
     a.name = { a: 1 };
     console.log(eval(uneval(a)).name); // b
+    ```
+- If you set the property `"__proto__"` on an object, the function will think that you are trying to assign the prototype
+    ```js
+    const a = Object.defineProperty(a, "__proto__", { value: 12, enumerable: true });
+    console.log(a);                 // { ['__proto__']: 12 }
+    console.log(eval(uneval(a)))    // Uncaught TypeError: Object prototype may only be an Object or null: 12
     ```

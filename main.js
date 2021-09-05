@@ -2,8 +2,9 @@
 /*
     [WIP]: {function,object,array}.{get,set}
     [WIP]: refactor modulare per supporto serializzazioni personalizzate
-        [WIP]: funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()")
+        [WIP]: funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()") => $[Symbol.for("uneval")]()
     [/!\]: le proprietà gestite di oggetti gestiti non vengono salvate anche se sovrascritte dall'utente
+    [/!\]: "__proto__" proprietà asestante e non getter/setter di "Object.prototype" setta comunque il prototipo
 */
 
 var uneval = (typeof module === "undefined" ? {} : module).exports = (function () {
@@ -23,20 +24,22 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
         opts.endl = pretty && ((opts.endl ?? "\n") || "");
         opts.tab = pretty && ((opts.tab ?? "\t") || "");
         opts.method ??= true;
+        opts.proxy ??= true;
         opts.proto ??= true;
         opts.safe ??= true;
         opts.func ??= true;
         opts.val ??= "x";
 
-        //[ Wrapping con funzione se serve la cache ]
-        const temp = { i: 0 };
-        var out = uneval.source(obj, uneval.scan(obj, opts, temp), opts, level);
+        //[ Wrapping con funzione se serve la cache e/o la funzione di assegnazione ]
+        opts.assign = "";
+        opts.references = 0;
+        var out = uneval.source(obj, uneval.scan(obj, opts), opts, level);
         if (
             obj instanceof Function && obj.name && opts.safe ||
-            out[0] == "{" && (opts.safe || (temp.i && opts.func))
+            out[0] == "{" && (opts.safe || (opts.references && opts.func))
         ) out = `(${ out })`;
-        return opts.func && temp.i
-        ? `(${ opts.val }${ opts.space }=>${ opts.space }${ out })({})`
+        return opts.func && (opts.references || opts.assign)
+        ? `(${ opts.val }${ opts.space }=>${ opts.space }${ out })({${ opts.assign && `${ opts.space }assign:${ opts.space }${ uneval.utils.assign }${ opts.space }` }})`
         : out;
     }
 
@@ -83,40 +86,67 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
      * Return the structure object of "obj".
      * @param {any} obj The object to scan
      * @param {Object} opts An object containing the preferences of the scanning 
-     * @param {Object} gen An object that keep tracks of the ids of the repeating objects
      * @param {Map<Object, Struct>} cache A map containing the structures of the traversed objects
      * @param {Function|Boolean} prev A way for the function to communicate to the parent call (About circular references); If it's 'false' then it does not check the internal properties
+     * @param {Circular} parent The informations about the parent object
      * @returns The structure of "obj"
      */
-    function scan(obj, opts = {}, gen = { i: 0 }, cache = new Map(), prev)
+    function scan(obj, opts = {}, cache = new Map(), prev, parent)
     {
         const type = typeof obj, { utils } = uneval;
         if (obj === null || (type !== "object" && type !== "function" && type !== "symbol"))
             return null;
         else if (cache.has(obj))
-            return cache.get(obj).ref(gen); // Riferimento multiplo
+            return cache.get(obj).ref(opts); // Riferimento multiplo
         else
         {
-            //[ Riferimento Circolare ]
-            const next = cir => cir.outer === obj ? (cir.inner = cir.inner.ref(gen), out.cir.push(cir), delete cir.outer) : prev?.(cir);
             const out = new utils.Struct();
             cache.set(obj, out);
+
+            //[ Riferimento Circolare ]
+            function next(cir)
+            {
+                if (cir.outer === obj)
+                {
+                    cir.inner = cir.inner.ref(opts);
+                    out.cir[cir.delegate ? "unshift" : "push"](cir); // Metto sempre le espressioni prima dei riferimenti
+                    return delete cir.outer;
+                }
+                else return prev?.(cir);
+            }
             
             //[ Eccezioni ]
+            if (opts.proxy && typeof process !== "undefined" && typeof process.binding !== "undefined")
+            {
+                const temp = process.binding("util").getProxyDetails(obj);
+                if (temp)
+                {
+                    out.delegate = temp.map(x => {
+                        if (parent)
+                        {
+                            parent.outer = x;
+                            parent.delegate = new utils.Delegate(obj, out);
+                            out.skip ||= next(parent);
+                        }
+                        return utils.Delegate.from(x, opts, cache, next);
+                    });
+                    return out; // É una proxy e non credo possa contenere proprietà proprie
+                }
+            }
             if (obj instanceof Symbol) // Scan parte primitiva
-                out.delegate = new utils.Delegate(obj.valueOf(), opts, gen, cache); // Non serve "prev", tanto un simbolo non ha sotto-proprietà da salvare
+                out.delegate = utils.Delegate.from(obj.valueOf(), opts, cache); // Non serve "prev", tanto un simbolo non ha sotto-proprietà da salvare
             else if (obj instanceof Map || obj instanceof Set)
-                out.delegate = new utils.Delegate([ ...obj ], opts, gen, cache, next);
+                out.delegate = utils.Delegate.from([ ...obj ], opts, cache, next);
             else if (obj?.constructor instanceof Function && obj.constructor?.prototype === obj)
             {
-                out.delegate = new utils.Delegate(obj.constructor, opts, gen, cache, false); // "prev" è impostato su 'false' per far saltare le proprietà statiche a "uneval.scan()"
+                out.delegate = utils.Delegate.from(obj.constructor, opts, cache, false); // "prev" è impostato su 'false' per far saltare le proprietà statiche a "uneval.scan()"
                 return out; // É il prototipo di una classe, lascio che sia il codice della classe a definire le sue proprietà
             }
             else if (type == "function")
             {
-                const { value: str } = out.delegate = { value: obj.toString() };
-                out.delegate.method = utils.method.test(str);
-                if ((out.delegate.native = str.endsWith(") { [native code] }") || str.endsWith(") { [Command Line API] }")))
+                const { value: temp } = out.delegate = { value: obj.toString() };
+                out.delegate.method = utils.method.test(temp);
+                if ((out.delegate.native = temp.endsWith(") { [native code] }") || temp.endsWith(") { [Command Line API] }")))
                 {
                     out.delegate.global = globalThis[obj.name] === obj;
                     return out; // Le funzioni native non si scannerizzano
@@ -135,12 +165,13 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                         continue;
 
                     //[ Struttura chiave e valore ]
-                    const temp = [ k, v ].map(x => uneval.scan(x, opts, gen, cache, next));
+                    const kS = uneval.scan(k, opts, cache, next);
+                    const vS = uneval.scan(v, opts, cache, next, new utils.Circular(k, kS, out));
                     
                     //[ Autoriferimento ]
-                    if (v === obj) out.cir.push(new utils.Circular(k, temp[0], out.ref(gen)));
-                    else if (prev?.(new utils.Circular(k, temp[0], out, v)));
-                    else out.sub.set(k, temp); // La chiave viene salvata solo se non si tratta di un riferimento circolare
+                    if (v === obj) out.cir.push(new utils.Circular(k, kS, out.ref(opts)));
+                    else if (prev?.(new utils.Circular(k, kS, out, v)));
+                    else if (!vS?.skip) out.sub.set(k, [ kS, vS ]); // La chiave viene salvata solo se non si tratta di un riferimento circolare
                 }
             }
             return out;
@@ -157,6 +188,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
          */
         utils: {
             method: /^(async\s+)?([\["*]|(?!\w+\s*=>|\(|function\W|class(?!\s*\()\W))/,
+            assign: (a,b)=>Object.defineProperties(a,Object.getOwnPropertyDescriptors(b)), // Se serve le funzioni impostano "opts.assign" su 'true'
             showFormatting: { space: "\x1b[101m \x1b[0m", tab: "\x1b[104m  \x1b[0m", endl: "\x1b[105m \n\x1b[0m" },
             managedProtos: new Map((cache => [
                 [ globalThis.Buffer, x => uneval.utils.index(x) ],
@@ -179,34 +211,36 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
 
             /**
              * An object representing the structure of another.
-             * If a cache entry is empty is because is inside of a managed object's "__proto__".
              */
             Struct: class {
-                delegate;           // Eventuale coppia valore-struct che rappresenterà l'oggetto corrente
-                sub = new Map();    // Oggetto che mappa le proprietà dell'oggetto con una coppia di oggetti che rappresentano la struttura rispettivamente della chiave e del valore della proprietà
-                cir = [];           // Lista dei riferimenti circolari che fanno riferimento all'oggetto
+                skip = false;       // Salta la proprietà che contiene questo struct poichè verra salvata direttamente sul riferimento circolare
                 id = "";            // Eventuale indice dell'oggetto al interno della cache
-                ref(gen) { return this.id ||= ++gen.i; }
+                cir = [];           // Lista dei riferimenti circolari che fanno riferimento all'oggetto
+                sub = new Map();    // Oggetto che mappa le proprietà dell'oggetto con una coppia di oggetti che rappresentano la struttura rispettivamente della chiave e del valore della proprietà
+                delegate;           // Eventuale coppia valore-struct che rappresenterà l'oggetto corrente
+                ref(opts) { return this.id ||= ++opts.references; }
             },
 
             /**
-             * An object containing the informations about a circular reference
+             * An object containing the informations about a circular reference.
              */
             Circular: class {
                 key;                // La chiave della proprietà di "inner" che contiene "outer"
                 struct;             // Oggetto che rappresenta la struttura di "key"
                 inner;              // Struct del oggetto interno che contiene un riferimento ad un oggetto esterno
                 outer;              // Oggetto esterno
-                constructor(key, struct, inner, outer) { this.key = key; this.struct = struct; this.inner = inner; this.outer = outer }
+                delegate;           // Eventuale coppia valore-struct che conterrà il valore da assegnare se non è stato possibile metterlo in cache
+                constructor(key, struct, inner, outer, delegate) { this.key = key; this.struct = struct; this.inner = inner; this.outer = outer; this.delegate = delegate; }
             },
 
             /**
-             * An object containing a value and a structure that will manage a special object
+             * An object containing a value and a structure that will manage a special object.
              */
             Delegate: class {
                 value;              // Valore che rappresenta l'oggetto
                 struct;             // Struttura di "value"
-                constructor(obj, opts, gen, cache, prev) { this.value = obj; this.struct = uneval.scan(obj, opts, gen, cache, prev); }
+                constructor(value, struct) { this.value = value; this.struct = struct; }
+                static from(...args) { return new this(args[0], uneval.scan(...args)); }
             },
 
             /**
@@ -241,7 +275,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             },
 
             /**
-             * Get if "key" would be put in in the array part or the object part of an array
+             * Get if "key" would be put in in the array part or the object part of an array.
              * @param {String|Symbol|Number} key The value to check
              * @returns If "key" is an array key
              */
@@ -290,9 +324,10 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             },
 
             /**
-             * Nested object types (Function, Objects and Arrays) with special notation
+             * Nested object types (Function, Objects and Arrays) with special notation.
              */
             nested: {
+
                 /**
                  * Stringifies unmanaged objects and arrays.
                  * @param {any} obj The object to stringify
@@ -303,25 +338,79 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                  */
                 circular(obj, struct, opts, level) {
                     const cond = struct.cir.length || "", { utils } = uneval;
-                    const out = this.proto(obj, struct, opts, level + (cond && opts.tab));
+                    const out = this.proxy(obj, struct, opts, level + (cond && opts.tab));
                     if (!cond) return out;
 
+                    var expr = false; // Valuta se l'ultimo riferimento circolare conteneva una expressione piuttosto che un riferimento
                     const tLast = opts.space + opts.endl + level;
                     const tFull = tLast + opts.tab;
                     return `(${ tFull }${ utils.def(struct, opts) }${ out },${ tFull }${
                         struct
                         .cir
-                        .map(x => `${ opts.val }[${ x.inner }]${ 
-                            typeof x.struct === "number"
-                            ? `[${ opts.val }[${ x.struct }]]`
-                            : utils.key(x.key, false, utils.def(x.struct, opts))
-                        }${ opts.space }=${ opts.space }${ opts.val }[${ struct.id }]`)
+                        .map(x =>
+                            `${ opts.val }[${ x.inner }]${ 
+                                typeof x.struct === "number"
+                                ? `[${ opts.val }[${ x.struct }]]`
+                                : utils.key(x.key, false, utils.def(x.struct, opts))
+                            }${ opts.space }=${ opts.space }${ 
+                                (expr = x.delegate)
+                                ? uneval.source(x.delegate.value, x.delegate.struct, opts, level + opts.tab)
+                                : `${ opts.val }[${ struct.id }]`
+                            }`
+                        )
                         .join("," + tFull)
+                    }${ expr ? `,${ tFull }${ opts.val }[${ struct.id }]` : "" }${ tLast })`;
+                },
+
+                /**
+                 * Stringifies [[Target]] and [[Handler]] of a proxy.
+                 * The proxy prototype is not inside "uneval.utils.managedProtos" because it does not exists.
+                 * @param {Proxy|any} obj The proxy to stringify
+                 * @param {Struct} struct The object representing the structure of "obj"
+                 * @param {Object} opts An object containing the preferences of the conversion
+                 * @param {String} level The tabs to put before each line
+                 * @returns The stringified object
+                 */
+                proxy(obj, struct, opts, level) {
+                    if (opts.proxy && typeof process !== "undefined" && typeof process.binding !== "undefined" && process.binding("util").getProxyDetails(obj))
+                    {
+                        const tLast = opts.space + opts.endl + level;
+                        const tFull = tLast + opts.tab;
+                        return `new Proxy(${ tFull }${
+                            uneval.source(struct.delegate[0].value, struct.delegate[0].struct, opts, level + opts.tab)
+                        },${ tFull }${
+                            uneval.source(struct.delegate[1].value, struct.delegate[1].struct, opts, level + opts.tab)
+                        }${ tLast })`;
+                    }
+                    return this.proto(obj, struct, opts, level);
+                },
+
+                /**
+                 * Assigns the prototype of an object.
+                 * @param {any} obj The object to which the prototype will be assigned
+                 * @param {Struct} struct The object representing the structure of "obj"
+                 * @param {Object} opts An object containing the preferences of the conversion
+                 * @param {String} level The tabs to put before each line
+                 * @returns The stringified object
+                 */
+                proto(obj, struct, opts, level) {
+                    const cond = struct.sub.has("__proto__") || "", { utils } = uneval;
+                    const out = this.assign(obj, struct, opts, level + (cond && opts.tab));
+                    if (!cond) return out;
+
+                    const tLast = opts.space + opts.endl + level;
+                    const tFull = tLast + opts.tab;
+                    return obj.__proto__ === undefined && out === "{}"
+                    ? "Object.create(null)"
+                    : `Object.setPrototypeOf(${ tFull }${ out },${ tFull }${
+                        obj.__proto__ === undefined
+                        ? "null"
+                        : uneval.source(obj.__proto__, struct.sub.get("__proto__")[1], opts, level + opts.tab)
                     }${ tLast })`;
                 },
 
                 /**
-                 * Generates the source of a managed object and, if it has special properties, puts it inside of an "Object.assign()" call with its default object source
+                 * Generates the source of a managed object and, if it has special properties, puts it inside of an "uneval.utils.assign()" call with its default object source.
                  * @param {any} obj The object to stringify
                  * @param {Struct} struct The object representing the structure of "obj"
                  * @param {Object} opts An object containing the preferences of the conversion
@@ -380,37 +469,13 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                     {
                         const out = temp.length ? `{${ g }${ temp.join("," + g) }${ gl }}` : "{}";
                         return managed
-                        ? `Object.assign(${ t }${ managed },${ t }${ out }${ tl })`
+                        ? opts.assign = `${ opts.val }.assign(${ t }${ managed },${ t }${ out }${ tl })`
                         : out;
                     }
                 },
 
                 /**
-                 * Assigns the prototype of an object
-                 * @param {any} obj The object to which the prototype will be assigned
-                 * @param {Struct} struct The object representing the structure of "obj"
-                 * @param {Object} opts An object containing the preferences of the conversion
-                 * @param {String} level The tabs to put before each line
-                 * @returns The stringified object
-                 */
-                proto(obj, struct, opts, level) {
-                    const cond = struct.sub.has("__proto__") || "", { utils } = uneval;
-                    const out = this.assign(obj, struct, opts, level + (cond && opts.tab));
-                    if (!cond) return out;
-
-                    const tLast = opts.space + opts.endl + level;
-                    const tFull = tLast + opts.tab;
-                    return obj.__proto__ === undefined && out === "{}"
-                    ? "Object.create(null)"
-                    : `Object.setPrototypeOf(${ tFull }${ out },${ tFull }${
-                        obj.__proto__ === undefined
-                        ? "null"
-                        : uneval.source(obj.__proto__, struct.sub.get("__proto__")[1], opts, level + opts.tab)
-                    }${ tLast })`;
-                },
-
-                /**
-                 * Stringifies an array's managed part
+                 * Stringifies an array's managed part.
                  * @param {Array} obj The array
                  * @param {Struct} struct The object representing the structure of "obj"
                  * @param {Object} opts An object containing the preferences of the conversion
@@ -434,7 +499,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                 },
 
                 /**
-                 * Stringifies a function managed part
+                 * Stringifies a function managed part.
                  * @param {Function} obj The function
                  * @param {Struct} struct The object representing the structure of "obj"
                  * @param {Object} opts An object containing the preferences of the conversion

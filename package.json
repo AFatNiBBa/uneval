@@ -1,7 +1,7 @@
 {
   "name": "uneval.js",
-  "version": "3.1.0",
-  "description": "Convert an object to its source code (With references too!)",
+  "version": "4.0.0",
+  "description": "Convert an object to its source code (With references and PROXIES too!)",
   "main": "main.js",
   "scripts": {
     "save": "npm publish & push"
@@ -14,6 +14,8 @@
     "serialization",
     "circular",
     "reference",
+    "jsproxy",
+    "proxy",
     "stringify",
     "json"
   ],
