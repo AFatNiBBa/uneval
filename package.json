@@ -1,6 +1,6 @@
 {
   "name": "uneval.js",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "Convert an object to its source code (With references and PROXIES too!)",
   "main": "main.js",
   "scripts": {
@@ -24,5 +24,8 @@
     "url": "https://github.com/AFatNiBBa/uneval"
   },
   "author": "AFatNiBBa",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "internal-prop": "^1.1.1"
+  }
 }

@@ -119,9 +119,11 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Circular references (Are much worse to implement, trust me)
 - Sparse arrays
 - Buffer
-    > Only in node.js, not in Web
+    > Only in node.js, not in Web.
 - Proxies
-    > Only in node.js, not in Web
+    > Only in node.js, not in Web <br>
+    
+    > To inspect proxies i used a node internal function, but i noticed it is no longer available in newer versions of node, so i created my own native module to handle that, node will build the module from source when you download it, but that is a process that uses externals tools in your machine that may be not available. The function will try to use the new method if the new one is not available
 - The Global object
 - `undefined`
 - `-0`, `NaN`, `Infinity`, `-Infinity`

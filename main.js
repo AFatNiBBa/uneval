@@ -9,6 +9,10 @@
 */
 
 var uneval = (typeof module === "undefined" ? {} : module).exports = (function () {
+    
+    var fromProxy;
+    if (typeof require !== "undefined" && (fromProxy = require?.("internal-prop")?.fromProxy));
+    else if (typeof process !== "undefined" && (fromProxy = process?.binding?.("util")?.getProxyDetails));
 
     /**
      * Convert an object to its source code.
@@ -117,9 +121,9 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             }
             
             //[ Eccezioni ]
-            if (opts.proxy && typeof process !== "undefined" && typeof process.binding !== "undefined")
+            if (opts.proxy && fromProxy)
             {
-                const temp = process.binding("util").getProxyDetails(obj);
+                const temp = fromProxy(obj);
                 if (temp)
                 {
                     out.delegate = temp.map(x => {
@@ -373,7 +377,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                  * @returns The stringified object
                  */
                 proxy(obj, struct, opts, level) {
-                    if (opts.proxy && typeof process !== "undefined" && typeof process.binding !== "undefined" && process.binding("util").getProxyDetails(obj))
+                    if (opts.proxy && fromProxy && fromProxy(obj))
                     {
                         const tLast = opts.space + opts.endl + level;
                         const tFull = tLast + opts.tab;
