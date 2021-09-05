@@ -170,7 +170,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     ```
 - If you set the property `"__proto__"` on an object, the function will think that you are trying to assign the prototype
     ```js
-    const a = Object.defineProperty(a, "__proto__", { value: 12, enumerable: true });
+    const a = Object.defineProperty({}, "__proto__", { value: 12, enumerable: true });
     console.log(a);                 // { ['__proto__']: 12 }
     console.log(eval(uneval(a)))    // Uncaught TypeError: Object prototype may only be an Object or null: 12
     ```

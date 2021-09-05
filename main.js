@@ -3,6 +3,7 @@
     [WIP]: {function,object,array}.{get,set}
     [WIP]: refactor modulare per supporto serializzazioni personalizzate
         [WIP]: funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()") => $[Symbol.for("uneval")]()
+    [MAY]: spazio tra le virgole diverso da quello sui bordi
     [/!\]: le proprietà gestite di oggetti gestiti non vengono salvate anche se sovrascritte dall'utente
     [/!\]: "__proto__" proprietà asestante e non getter/setter di "Object.prototype" setta comunque il prototipo
 */
