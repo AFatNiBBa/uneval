@@ -14,6 +14,9 @@ document.head.append(Object.assign(document.createElement("script"), { src: "htt
 > npm r uneval.js & npm i uneval.js
 > ```
 
+## Warning
+If you get any error while installing refer to the "warning" section of [this](https://github.com/AFatNiBBa/internal-prop#warning)
+
 ## Usage
 You can both import the package like this...
 ```js
@@ -141,9 +144,44 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Big Integers
 - Objects with a `null` prototype
 - Custom types
+- Custom conversions
+    > To define your own conversion you just need to define a function in your object (Or in its prototype) under the symbol `uneval.utils.customSource` (Or `Symbol.for("uneval.utils.customSource")` when uneval is not in the current context)
+    > ```js
+    > class NumArray extends Array { value = "test" }
+    > 
+    > NumArray.prototype[Symbol.for("uneval.utils.customScan")] = function(
+    >     out,    // Object that will represent 'this'
+    >     opts,   // The options that were passed to uneval with defaults applied
+    >     cache,  // A map from object to structure (like "out")
+    >     prev,   // A function to comunicate with the previous call to "uneval.scan()"
+    >     parent, // An object that define where 'this' is define on its parent
+    >     uneval  // The library, to not have clojures
+    > ) { return out; } // It doesn't scan anything because it only uneval numbers
+    > 
+    > NumArray.prototype[Symbol.for("uneval.utils.customSource")] = function(
+    >     struct, // Object that represents 'this'
+    >     opts,   // The options that were passed to uneval with defaults applied
+    >     level,  // A lot of "opts.tab" to put infront of every line of your code
+    >     uneval  // The library, to not have clojures
+    > ) { return `new NumArray(${ this.join("," + opts.space) })` }
+    > 
+    > const a = new NumArray(1, 2, 3);
+    > a.b = { c: 4 };
+    > console.log(uneval([ a, a.b ], { pretty: 0 }));
+    > ```
+    > It's a bit advanced but you SHOULD define the scan too, it is what has to get the structure of the object, if you leave the default it will scan things that may be not included in the generated source, but will still be referenced <br>
+    > Custom code:
+    > ```js
+    > [new NumArray(1,2,3),{c:4}]
+    > ```
+    > Custom without scan:
+    > ```js
+    > (x=>[Object.setPrototypeOf(new NumArray(1,2,3),(class NumArray extends Array { value = "test" }).prototype),x[1]])({})
+    > ```
+    > If you execute them you will notice that on the custom one that has not the scan defined there is a reference (`x[1]`) that is not defined anywhere, and it scanned the prototype of `NumArray` including it in the code even if is pretty useless
 - The module itself 😳
 
-## Unsupported (Or at least not completely)
+## Unsupported (Or at least not completely supported)
 - Clojures (Functions that access external local variables)
     > If you create a function with the new object method syntax and a computed key...
     > ```js
@@ -160,8 +198,8 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Class static properties or prototype properties that are not defined in the class source
 
 ## Future Support (Hopefully) in order of probability
-1. Custom conversions
-2. Getters and Setters (Now are counted as normal properties)
+1. Writing all comments in english (Some are in Italian) so you can understand better everything you eventually need
+2. Getters and Setters (For now are counted as normal properties)
 
 ## Known Problems
 - On an object of a special class, if you add a custom property with a key which is one of those that the special class uses by default, then that property may be skipped (Look at <br> `[ ...uneval.utils.managedProtos.keys() ].map(x => x.constructor.name)` <br> for a full list)

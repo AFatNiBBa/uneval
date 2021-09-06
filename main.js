@@ -1,9 +1,7 @@
 
 /*
+    [WIP]: ITA => ENG
     [WIP]: {function,object,array}.{get,set}
-    [WIP]: refactor modulare per supporto serializzazioni personalizzate
-        [WIP]: funzione che prende in parametro l'oggetto ed eventualmente restituisce una funzione per gestirlo (Sia in "scan()" che in "source()") => $[Symbol.for("uneval")]()
-    [MAY]: spazio tra le virgole diverso da quello sui bordi
     [/!\]: le proprietà gestite di oggetti gestiti non vengono salvate anche se sovrascritte dall'utente
     [/!\]: "__proto__" proprietà asestante e non getter/setter di "Object.prototype" setta comunque il prototipo
 */
@@ -11,8 +9,10 @@
 var uneval = (typeof module === "undefined" ? {} : module).exports = (function () {
     
     var fromProxy;
-    if (typeof require !== "undefined" && (fromProxy = require?.("internal-prop")?.fromProxy));
-    else if (typeof process !== "undefined" && (fromProxy = process?.binding?.("util")?.getProxyDetails));
+    if (typeof require !== "undefined")
+        try { fromProxy = require?.("internal-prop")?.fromProxy; } catch { }
+    if (!fromProxy && typeof process !== "undefined")
+        fromProxy = process?.binding?.("util")?.getProxyDetails;
 
     /**
      * Convert an object to its source code.
@@ -138,7 +138,9 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                     return out; // É una proxy e non credo possa contenere proprietà proprie
                 }
             }
-            if (obj instanceof Symbol) // Scan parte primitiva
+            if (obj?.[utils.customScan] instanceof Function)
+                return obj[utils.customScan](out, opts, cache, prev, parent, uneval);
+            else if (obj instanceof Symbol) // Scan parte primitiva
                 out.delegate = utils.Delegate.from(obj.valueOf(), opts, cache); // Non serve "prev", tanto un simbolo non ha sotto-proprietà da salvare
             else if (obj instanceof Map || obj instanceof Set)
                 out.delegate = utils.Delegate.from([ ...obj ], opts, cache, next);
@@ -185,13 +187,17 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
 
     //[ Export ]
     return Object.assign(uneval, {
-        uneval, write, source, scan,
-        toString: () => `(${ arguments.callee })()`,
+        uneval, write, source, scan, fromProxy,
+        
+        [Symbol.for("uneval.utils.customScan")]: x => x,
+        [Symbol.for("uneval.utils.customSource")]: () => `(${ arguments.callee })()`,
 
         /**
          * Core functions and values that make "uneval()" work.
          */
         utils: {
+            customScan: Symbol.for("uneval.utils.customScan"),
+            customSource: Symbol.for("uneval.utils.customSource"),
             method: /^(async\s+)?([\["*]|(?!\w+\s*=>|\(|function\W|class(?!\s*\()\W))/,
             assign: (a,b)=>Object.defineProperties(a,Object.getOwnPropertyDescriptors(b)), // Se serve le funzioni impostano "opts.assign" su 'true'
             showFormatting: { space: "\x1b[101m \x1b[0m", tab: "\x1b[104m  \x1b[0m", endl: "\x1b[105m \n\x1b[0m" },
@@ -423,9 +429,14 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                  * @returns The stringified object
                  */
                 assign(obj, struct, opts, level) {
+                    //[ Conversione personalizzata ]
+                    const { utils } = uneval;
+                    if (obj[utils.customSource] instanceof Function)
+                        return obj[utils.customSource](struct, opts, level, uneval);
+
                     //[ Valori gestiti ]
-                    const array = obj instanceof Array, { utils } = uneval;
-                    var custom = struct.sub.size ? opts.tab : ""; // Solo caso 'Map' e 'Set'
+                    const array = obj instanceof Array;
+                    var delta = struct.sub.size ? opts.tab : ""; // Solo caso 'Map' e 'Set'
                     var managed = (
                         (obj instanceof String || obj instanceof Number || obj instanceof Boolean || obj instanceof BigInt)
                             ? `Object(${ utils.source(obj.valueOf(), struct, opts) })`
@@ -434,7 +445,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                         : obj instanceof Date
                             ? `new Date(${ obj.getTime() })`
                         : (obj instanceof Set || obj instanceof Map)
-                            ? `new ${ obj.constructor.name }(${ utils.source(struct.delegate.value, struct.delegate.struct, opts, level + custom) })`
+                            ? `new ${ obj.constructor.name }(${ utils.source(struct.delegate.value, struct.delegate.struct, opts, level + delta) })`
                         : obj instanceof RegExp
                             ? obj.toString()
                         : (typeof Buffer !== "undefined" && obj instanceof Buffer)
@@ -445,7 +456,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                     );
                     
                     //[ Valori definiti ]
-                    custom = (array || managed) ? opts.tab : ""; // Solo caso oggetto base
+                    delta = (array || managed) ? opts.tab : ""; // Solo caso oggetto base
                     const temp = [];
                     for (const [ k, [ kS, vS ] ] of struct.sub) if (k !== "__proto__" && !(array && uneval.utils.index(k)))
                     {
@@ -457,16 +468,16 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                                 typeof kS === "number"
                                 ? `[${ opts.val }[${ kS }]]`
                                 : utils.key(k, true, utils.def(kS, opts))
-                            }:${ opts.space }${ uneval.source(v, vS, opts, level + opts.tab + custom) }`
+                            }:${ opts.space }${ uneval.source(v, vS, opts, level + opts.tab + delta) }`
                         );
                     }
 
                     //[ Unione ]
-                    custom = ((array || managed) && temp.length) ? opts.tab : "";
-                    if (array) managed ??= this.array(obj, struct, opts, level + custom);   // Viene posto dopo il settaggio definitivo di "custom" perchè l'array ha bisogno di più contesto per capire se ci sono proprietà personalizzate
+                    delta = ((array || managed) && temp.length) ? opts.tab : "";
+                    if (array) managed ??= this.array(obj, struct, opts, level + delta);   // Viene posto dopo il settaggio definitivo di "custom" perchè l'array ha bisogno di più contesto per capire se ci sono proprietà personalizzate
                     const tl = opts.space + opts.endl + level;                              // Tonda (Ultima)
                     const t = tl + opts.tab;                                                // Tonda
-                    const gl = tl + custom;                                                 // Graffa (Ultima)
+                    const gl = tl + delta;                                                 // Graffa (Ultima)
                     const g = gl + opts.tab;                                                // Graffa
                     if (managed && !temp.length)
                         return managed;
