@@ -15,7 +15,7 @@ document.head.append(Object.assign(document.createElement("script"), { src: "htt
 > ```
 
 ## Warning
-If you get any error while installing refer to the "warning" section of [this](https://github.com/AFatNiBBa/internal-prop#warning)
+If you get any error while installing or the proxy are not stringified properly refer to the "warning" section of [this](https://github.com/AFatNiBBa/internal-prop#warning)
 
 ## Usage
 You can both import the package like this...
@@ -69,6 +69,9 @@ module.exports = [
 Additionally to the object to stringify you can pass an option object to personalize your output.
 The option object will change during the process, it is advised that you don't use it elsewhere.
 The available options are:
+- **`namespace`**
+    - A `Map` that translates specific instances into their source
+    - It defautls to `undefined`
 - **`pretty`**
     - Setting it to `false` deactivates `space`, `endl` and `tab`
     - It defaults to `true`
@@ -124,9 +127,9 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Buffer
     > Only in node.js, not in Web.
 - Proxies
-    > Only in node.js, not in Web <br>
+    > Only in node.js, not in Web. <br>
     
-    > To inspect proxies i used a node internal function, but i noticed it is no longer available in newer versions of node, so i created my own native module to handle that, node will build the module from source when you download it, but that is a process that uses externals tools in your machine that may be not available. The function will try to use the new method if the new one is not available
+    > To inspect proxies i used a node internal function, but i noticed it is no longer available in newer versions of node, so i created my own native module to handle that, node will build the module from source when you download it, but that is a process that uses externals tools in your machine that may be not available. The function will try to use the old method if the new one is not available.
 - The Global object
 - `undefined`
 - `-0`, `NaN`, `Infinity`, `-Infinity`
@@ -169,7 +172,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     > a.b = { c: 4 };
     > console.log(uneval([ a, a.b ], { pretty: 0 }));
     > ```
-    > It's a bit advanced but you SHOULD define the scan too, it is what has to get the structure of the object, if you leave the default it will scan things that may be not included in the generated source, but will still be referenced <br>
+    > It's a bit advanced but you SHOULD define the scan too, it is what has to get the structure of the object, if you leave the default it will scan things that may be not included in the generated source, but they will still be referenced <br>
     > Custom code:
     > ```js
     > [new NumArray(1,2,3),{c:4}]
@@ -178,7 +181,9 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     > ```js
     > (x=>[Object.setPrototypeOf(new NumArray(1,2,3),(class NumArray extends Array { value = "test" }).prototype),x[1]])({})
     > ```
-    > If you execute them you will notice that on the custom one that has not the scan defined there is a reference (`x[1]`) that is not defined anywhere, and it scanned the prototype of `NumArray` including it in the code even if is pretty useless
+    > If you execute them you will notice that on the custom one that has not the scan defined there is a reference (`x[1]`) that is not defined anywhere, and it scanned the prototype of `NumArray` including it in the generated source, which is redundant.
+- Custom definitions
+    > Similiar to custom conversions, but it works on specific instances and with non objects too (View the `namespace` option for more details)
 - The module itself 😳
 
 ## Unsupported (Or at least not completely supported)
@@ -195,7 +200,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     > To avoid this problem simply set the `method` option to `false`, this will use the (ugly) safe syntax, if the function is referenced elsewhere is used by default.
     > If a value is defined inside a non-safe method it will not be saved, additionally if it is the first time you include it all other references will be `undefined`
 - Native functions and Command Line API functions (Web) (If not global), and their eventual user defined custom properties
-- Class static properties or prototype properties that are not defined in the class source
+- Class static properties or prototype properties that are not defined in the class block
 
 ## Future Support (Hopefully) in order of probability
 1. Writing all comments in english (Some are in Italian) so you can understand better everything you eventually need

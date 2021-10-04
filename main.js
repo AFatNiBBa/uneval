@@ -81,10 +81,11 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
      */
     function source(obj, struct, opts = {}, level = "")
     {
-        return typeof struct === "number"
-        ? `${ opts.val }[${ struct }]`
-        : `${ struct?.cir?.length ? "" : uneval.utils.def(struct, opts) }${ uneval.utils.source(obj, struct, opts, level) }`;
-        //    ↑ Senza questo i riferimenti li definiva FUORI dalle parentesi tonde sugli oggetti
+        return struct?.delegate?.name ?? (
+            typeof struct === "number"
+            ? `${ opts.val }[${ struct }]`
+            : `${ struct?.cir?.length ? "" : uneval.utils.def(struct, opts) }${ uneval.utils.source(obj, struct, opts, level) }`
+        ); //     ↑ Senza questo i riferimenti li definiva FUORI dalle parentesi tonde sugli oggetti
     }
 
     /**
@@ -121,6 +122,8 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             }
             
             //[ Eccezioni ]
+            if (opts.namespace?.has?.(obj))
+                return Object.assign(out, { delegate: { name: opts.namespace.get(obj) } });
             if (opts.proxy && fromProxy)
             {
                 const temp = fromProxy(obj);
@@ -255,15 +258,15 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             },
 
             /**
-             * Returns the best code to define a key in an obejct.
+             * Returns the best code to define a key in an object.
              * @param {String|Symbol} str The key to define
              * @param {Boolean} obj True if is to define inside of an object, False if is outside
              * @param {String} val Eventual code to put inside the square brackets of a symbol key definition
              * @returns The code of the key
              */
-            key(str, obj = false, val = "") {
+            key(str, obj = false, struct, opts) {
                 return typeof str === "symbol"
-                ? `[${ val }${ uneval.source(str, null) }]`
+                ? `[${ uneval.source(str, struct, opts) }]`
                 : (
                     str.match(/^[A-Za-z$_][0-9A-Za-z$_]*$/) 
                     ? (obj ? str : "." + str)
@@ -362,7 +365,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                             `${ opts.val }[${ x.inner }]${ 
                                 typeof x.struct === "number"
                                 ? `[${ opts.val }[${ x.struct }]]`
-                                : utils.key(x.key, false, utils.def(x.struct, opts))
+                                : utils.key(x.key, false, x.struct, opts)
                             }${ opts.space }=${ opts.space }${ 
                                 (expr = x.delegate)
                                 ? uneval.source(x.delegate.value, x.delegate.struct, opts, level + opts.tab)
@@ -467,7 +470,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                             : `${
                                 typeof kS === "number"
                                 ? `[${ opts.val }[${ kS }]]`
-                                : utils.key(k, true, utils.def(kS, opts))
+                                : utils.key(k, true, kS, opts)
                             }:${ opts.space }${ uneval.source(v, vS, opts, level + opts.tab + delta) }`
                         );
                     }
