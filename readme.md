@@ -15,7 +15,7 @@ document.head.append(Object.assign(document.createElement("script"), { src: "htt
 > ```
 
 ## Warning
-If you get any error while installing or the proxy are not stringified properly refer to the "warning" section of [this](https://github.com/AFatNiBBa/internal-prop#warning)
+If you get any error while installing or the Proxies are not stringified properly refer to the "warning" section of [this](https://github.com/AFatNiBBa/internal-prop#warning)
 
 ## Usage
 You can both import the package like this...
