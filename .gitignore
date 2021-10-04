@@ -1,5 +1,5 @@
 # Backup
-prv_*.js
+prv_*
 
 # Logs
 logs
