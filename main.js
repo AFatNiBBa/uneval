@@ -309,7 +309,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
              * @returns The stringified object
              */
             source(obj, struct, opts = {}, level = "") {
-                if (struct.delegate?.name)
+                if (struct?.delegate?.name)
                     return struct.delegate.name;
                 else switch(typeof obj)
                 {
