@@ -1,6 +1,6 @@
 
 /*
-    [WIP]: ITA => ENG
+    [WIP]: doc (eng)
     [WIP]: {function,object,array}.{get,set}
     [/!\]: le proprietà gestite di oggetti gestiti non vengono salvate anche se sovrascritte dall'utente
     [/!\]: "__proto__" proprietà asestante e non getter/setter di "Object.prototype" setta comunque il prototipo
@@ -27,7 +27,8 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
         const pretty = opts.pretty = (opts.pretty ?? true) || "";
         opts.space = pretty && ((opts.space ?? " ") || "");
         opts.endl = pretty && ((opts.endl ?? "\n") || "");
-        opts.tab = pretty && ((opts.tab ?? "\t") || "");
+        opts.tab = pretty && (typeof opts.tab === "number" ? opts.space.repeat(opts.tab) : ((opts.tab ?? "\t") || ""));
+        opts.custom ??= true;
         opts.method ??= true;
         opts.proxy ??= true;
         opts.proto ??= true;
@@ -141,7 +142,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                     return out; // É una proxy e non credo possa contenere proprietà proprie
                 }
             }
-            if (obj?.[utils.customScan] instanceof Function)
+            if (opts.custom && obj?.[utils.customScan] instanceof Function)
                 return obj[utils.customScan](out, opts, cache, prev, parent, uneval);
             else if (obj instanceof Symbol) // Scan parte primitiva
                 out.delegate = utils.Delegate.from(obj.valueOf(), opts, cache); // Non serve "prev", tanto un simbolo non ha sotto-proprietà da salvare
@@ -189,18 +190,19 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
     }
 
     //[ Export ]
+    const customScan = Symbol.for("uneval.utils.customScan"), customSource = Symbol.for("uneval.utils.customSource");
     return Object.assign(uneval, {
         uneval, write, source, scan, fromProxy,
         
-        [Symbol.for("uneval.utils.customScan")]: x => x,
-        [Symbol.for("uneval.utils.customSource")]: () => `(${ arguments.callee })()`,
+        [customScan]: x => x,
+        [customSource]: () => `(${ arguments.callee })()`,
 
         /**
          * Core functions and values that make "uneval()" work.
          */
         utils: {
-            customScan: Symbol.for("uneval.utils.customScan"),
-            customSource: Symbol.for("uneval.utils.customSource"),
+            customScan,
+            customSource,
             method: /^(async\s+)?([\["*]|(?!\w+\s*=>|\(|function\W|class(?!\s*\()\W))/,
             assign: (a,b)=>Object.defineProperties(a,Object.getOwnPropertyDescriptors(b)), // Se serve le funzioni impostano "opts.assign" su 'true'
             showFormatting: { space: "\x1b[101m \x1b[0m", tab: "\x1b[104m  \x1b[0m", endl: "\x1b[105m \n\x1b[0m" },
@@ -434,7 +436,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                 assign(obj, struct, opts, level) {
                     //[ Conversione personalizzata ]
                     const { utils } = uneval;
-                    if (obj[utils.customSource] instanceof Function)
+                    if (opts.custom && obj[utils.customSource] instanceof Function)
                         return obj[utils.customSource](struct, opts, level, uneval);
 
                     //[ Valori gestiti ]
@@ -477,10 +479,10 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
 
                     //[ Unione ]
                     delta = ((array || managed) && temp.length) ? opts.tab : "";
-                    if (array) managed ??= this.array(obj, struct, opts, level + delta);   // Viene posto dopo il settaggio definitivo di "custom" perchè l'array ha bisogno di più contesto per capire se ci sono proprietà personalizzate
+                    if (array) managed ??= this.array(obj, struct, opts, level + delta);    // Viene posto dopo il settaggio definitivo di "delta" perchè l'array ha bisogno di più contesto per capire se ci sono proprietà personalizzate
                     const tl = opts.space + opts.endl + level;                              // Tonda (Ultima)
                     const t = tl + opts.tab;                                                // Tonda
-                    const gl = tl + delta;                                                 // Graffa (Ultima)
+                    const gl = tl + delta;                                                  // Graffa (Ultima)
                     const g = gl + opts.tab;                                                // Graffa
                     if (managed && !temp.length)
                         return managed;

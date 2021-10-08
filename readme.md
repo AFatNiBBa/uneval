@@ -26,7 +26,7 @@ const uneval = require("uneval.js");
 ```js
 const { uneval } = require("uneval.js");
 ```
-Simply pass the function as an argument to obtain the source code and eval it to obtain the object again.
+Simply pass an object to the function as an argument to obtain the source code and eval it to obtain the object again.
 > You additionally can give some options to personalize the output
 ```js
 const a = {};
@@ -85,8 +85,12 @@ The available options are:
     - It defaults to `"\n"`
 - **`tab`**
     - Set the string that will replace the tabs in the output
+    - Setting it to a number "n" is like setting it to the `space` option repeated "n" times
     - Setting it to `false` is like setting it to `""`
     - It defaults to `"\t"`
+- **`custom`**
+    - If is set to `false` the custom conversions will be ignored
+    - It defaults to `true`
 - **`method`**
     - If is set to `false` allows only the safe, but way uglier, syntax for objects methods
     - It defaults to `true`
