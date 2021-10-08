@@ -82,11 +82,10 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
      */
     function source(obj, struct, opts = {}, level = "")
     {
-        return struct?.delegate?.name ?? (
-            typeof struct === "number"
-            ? `${ opts.val }[${ struct }]`
-            : `${ struct?.cir?.length ? "" : uneval.utils.def(struct, opts) }${ uneval.utils.source(obj, struct, opts, level) }`
-        ); //     ↑ Senza questo i riferimenti li definiva FUORI dalle parentesi tonde sugli oggetti
+        return typeof struct === "number"
+        ? `${ opts.val }[${ struct }]`
+        : `${ struct?.cir?.length ? "" : uneval.utils.def(struct, opts) }${ uneval.utils.source(obj, struct, opts, level) }`;
+        //    ↑ Senza questo i riferimenti li definiva FUORI dalle parentesi tonde sugli oggetti
     }
 
     /**
@@ -310,7 +309,9 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
              * @returns The stringified object
              */
             source(obj, struct, opts = {}, level = "") {
-                switch(typeof obj)
+                if (struct.delegate?.name)
+                    return struct.delegate.name;
+                else switch(typeof obj)
                 {
                     case "symbol": {
                         const temp = obj.description;
