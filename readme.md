@@ -15,7 +15,7 @@ document.head.append(Object.assign(document.createElement("script"), { src: "htt
 > ```
 
 ## Warning
-If you get any error while installing refer to the "warning" section of [this](https://github.com/AFatNiBBa/internal-prop#warning)
+If you get any error while installing or the Proxies are not stringified properly refer to the "warning" section of [this](https://github.com/AFatNiBBa/internal-prop#warning)
 
 ## Usage
 You can both import the package like this...
@@ -26,7 +26,7 @@ const uneval = require("uneval.js");
 ```js
 const { uneval } = require("uneval.js");
 ```
-Simply pass the function as an argument to obtain the source code and eval it to obtain the object again.
+Simply pass an object to the function as an argument to obtain the source code and eval it to obtain the object again.
 > You additionally can give some options to personalize the output
 ```js
 const a = {};
@@ -85,8 +85,12 @@ The available options are:
     - It defaults to `"\n"`
 - **`tab`**
     - Set the string that will replace the tabs in the output
+    - Setting it to a number "n" is like setting it to the `space` option repeated "n" times
     - Setting it to `false` is like setting it to `""`
     - It defaults to `"\t"`
+- **`custom`**
+    - If is set to `false` the custom conversions will be ignored
+    - It defaults to `true`
 - **`method`**
     - If is set to `false` allows only the safe, but way uglier, syntax for objects methods
     - It defaults to `true`
@@ -127,9 +131,9 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Buffer
     > Only in node.js, not in Web.
 - Proxies
-    > Only in node.js, not in Web <br>
+    > Only in node.js, not in Web. <br>
     
-    > To inspect proxies i used a node internal function, but i noticed it is no longer available in newer versions of node, so i created my own native module to handle that, node will build the module from source when you download it, but that is a process that uses externals tools in your machine that may be not available. The function will try to use the new method if the new one is not available
+    > To inspect proxies i used a node internal function, but i noticed it is no longer available in newer versions of node, so i created my own native module to handle that, node will build the module from source when you download it, but that is a process that uses externals tools in your machine that may be not available. The function will try to use the old method if the new one is not available.
 - The Global object
 - `undefined`
 - `-0`, `NaN`, `Infinity`, `-Infinity`
