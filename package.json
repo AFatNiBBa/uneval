@@ -1,6 +1,6 @@
 {
   "name": "uneval.js",
-  "version": "5.2.5",
+  "version": "5.2.6",
   "description": "Convert an object to its source code (With references and PROXIES too!)",
   "main": "main.js",
   "scripts": {
@@ -26,6 +26,6 @@
   "author": "AFatNiBBa",
   "license": "ISC",
   "optionalDependencies": {
-    "internal-prop": "^2.1.1"
+    "internal-prop": "^2.1.2"
   }
 }
