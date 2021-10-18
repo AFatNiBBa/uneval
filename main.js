@@ -1,6 +1,6 @@
 
 /*
-    [WIP]: doc (eng)
+    [WIP]: comment (eng)
     [WIP]: {function,object,array}.{get,set}
     [/!\]: le proprietà gestite di oggetti gestiti non vengono salvate anche se sovrascritte dall'utente
     [/!\]: "__proto__" proprietà asestante e non getter/setter di "Object.prototype" setta comunque il prototipo
@@ -32,21 +32,23 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
         opts.method ??= true;
         opts.proxy ??= true;
         opts.proto ??= true;
+        opts.depth ??= Infinity;
+        opts.call = (opts.call ?? true) || "";
         opts.safe ??= true;
         opts.func ??= true;
         opts.val ??= "x";
 
-        //[ Wrapping con funzione se serve la cache e/o la funzione di assegnazione ]
-        opts.assign = "";
-        opts.references = 0;
+        //[ Wrapping con funzione se "opts.call" è attivo e/o se serve la cache e/o la funzione di assegnazione ]
+        opts.stats = { assign: "", references: 0, depth: 0 };
         var out = uneval.source(obj, uneval.scan(obj, opts), opts, level);
+        const wrap = !opts.call || (opts.func && (opts.stats.references || opts.stats.assign));
         if (
-            obj instanceof Function && obj.name && opts.safe ||
-            out[0] == "{" && (opts.safe || (opts.references && opts.func))
+            obj instanceof Function && obj.name && opts.safe || // Forces named functions to be expressions and not statements
+            out[0] == "{" && (opts.safe || wrap)
         ) out = `(${ out })`;
-        return opts.func && (opts.references || opts.assign)
-        ? `(${ opts.val }${ opts.space }=>${ opts.space }${ out })({${ opts.assign && `${ opts.space }assign:${ opts.space }${ uneval.utils.assign }${ opts.space }` }})`
-        : out;
+        return wrap
+            ? `((${ opts.val }${ opts.space }=${ opts.space }{${ opts.stats.assign && `${ opts.space }assign:${ opts.space }${ uneval.utils.assign }${ opts.space }` }})${ opts.space }=>${ opts.space }${ out })${ opts.call && "()" }`
+            : out;
     }
 
     /**
@@ -143,10 +145,16 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             }
             if (opts.custom && obj?.[utils.customScan] instanceof Function)
                 return obj[utils.customScan](out, opts, cache, prev, parent, uneval);
-            else if (obj instanceof Symbol) // Scan parte primitiva
+            else if (obj instanceof Symbol) // Scan parte primitiva symbol
                 out.delegate = utils.Delegate.from(obj.valueOf(), opts, cache); // Non serve "prev", tanto un simbolo non ha sotto-proprietà da salvare
-            else if (obj instanceof Map || obj instanceof Set)
+            else if (obj instanceof Set)
                 out.delegate = utils.Delegate.from([ ...obj ], opts, cache, next);
+            else if (obj instanceof Map)
+            {
+                opts.stats.depth--;
+                out.delegate = utils.Delegate.from([ ...obj ], opts, cache, next);
+                opts.stats.depth++;
+            }
             else if (obj?.constructor instanceof Function && obj.constructor?.prototype === obj)
             {
                 out.delegate = utils.Delegate.from(obj.constructor, opts, cache, false); // "prev" è impostato su 'false' per far saltare le proprietà statiche a "uneval.scan()"
@@ -166,13 +174,15 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             // [ Scanning sotto proprietà ]
             if (prev !== false && obj !== globalThis && (type === "object" || type === "function"))
             {
+                opts.stats.depth++;
                 const managed = utils.managedProtos.get(obj.__proto__);
                 for (const k of Reflect.ownKeys(obj).concat("__proto__"))
                 {
-                    //[ Salta la proprietà ]
                     const v = obj[k];
-                    if ((k === "__proto__" && (!opts.proto || managed)) || managed?.(k))
-                        continue;
+                    if (
+                        (v instanceof Object && opts.stats.depth >= opts.depth) ||               // Salta se è oltre "opts.depth"
+                        ((k === "__proto__" && (!opts.proto || managed)) || managed?.(k))        // Salta la proprietà
+                    ) continue;
 
                     //[ Struttura chiave e valore ]
                     const kS = uneval.scan(k, opts, cache, next);
@@ -183,6 +193,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                     else if (prev?.(new utils.Circular(k, kS, out, v)));
                     else if (!vS?.skip) out.sub.set(k, [ kS, vS ]); // La chiave viene salvata solo se non si tratta di un riferimento circolare
                 }
+                opts.stats.depth--; 
             }
             return out;
         }
@@ -203,7 +214,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             customScan,
             customSource,
             method: /^(async\s+)?([\["*]|(?!\w+\s*=>|\(|function\W|class(?!\s*\()\W))/,
-            assign: (a,b)=>Object.defineProperties(a,Object.getOwnPropertyDescriptors(b)), // Se serve le funzioni impostano "opts.assign" su 'true'
+            assign: (a,b)=>Object.defineProperties(a,Object.getOwnPropertyDescriptors(b)), // Se serve le funzioni impostano "opts.stats.assign" su 'true'
             showFormatting: { space: "\x1b[101m \x1b[0m", tab: "\x1b[104m  \x1b[0m", endl: "\x1b[105m \n\x1b[0m" },
             managedProtos: new Map((cache => [
                 [ globalThis.Buffer, x => uneval.utils.index(x) ],
@@ -233,7 +244,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                 cir = [];           // Lista dei riferimenti circolari che fanno riferimento all'oggetto
                 sub = new Map();    // Oggetto che mappa le proprietà dell'oggetto con una coppia di oggetti che rappresentano la struttura rispettivamente della chiave e del valore della proprietà
                 delegate;           // Eventuale coppia valore-struct che rappresenterà l'oggetto corrente
-                ref(opts) { return this.id ||= ++opts.references; }
+                ref(opts) { return this.id ||= ++opts.stats.references; }
             },
 
             /**
@@ -491,7 +502,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
                     {
                         const out = temp.length ? `{${ g }${ temp.join("," + g) }${ gl }}` : "{}";
                         return managed
-                        ? opts.assign = `${ opts.val }.assign(${ t }${ managed },${ t }${ out }${ tl })`
+                        ? opts.stats.assign = `${ opts.val }.assign(${ t }${ managed },${ t }${ out }${ tl })`
                         : out;
                     }
                 },

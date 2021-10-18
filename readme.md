@@ -36,7 +36,7 @@ console.log(uneval(a, { tab: "  " }));
 ```
 And the output will be
 ```js
-(x => (
+((x = {}) => (
   x[1] = {
     c: x[2] = {
       url: /^(\+0?1\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}$/gi
@@ -45,7 +45,7 @@ And the output will be
   },
   x[2].a = x[1],
   x[1].e = x[1]
-))({})
+))()
 ```
 Note that the complexity of the output depends on the complexity of the input
 ```js
@@ -100,6 +100,12 @@ The available options are:
 - **`proto`**
     - Saves the class of objects (Including the `__proto__` property)
     - It defaults to `true`
+- **`depth`**
+    - If not `Infinity` specifies the maximum depth in which the object should be serialized
+    - It defaults to `Infinity`
+- **`call`**
+    - If `false` wraps forcibly the result in a function but doesn't evaluate it
+    - It defaults to `true`
 - **`safe`**
     - Wraps object literals in brackets to not confuse them with blocks
     - It's always `true` if the object is in the wrapper function
@@ -119,6 +125,9 @@ The available options are:
     - The code that will be put in front of the object source
     - If it is an object then the value of the property `pre` will be concatenated before the object while the value of `post` will be concatenated after
     - It defaults to `"module.exports = "`, the spaces will be the ones defined in the options
+- **`stats`**
+    - Not an option
+    - Its an object containing stats on the last execution (If you keep the settings object) and its necessary for the `uneval()` function
 
 Note that in every option which accepts a boolean you can put `0` to represent `false` and everything not "falsy" to represent `true`.
 
@@ -183,7 +192,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     > ```
     > Custom without scan:
     > ```js
-    > (x=>[Object.setPrototypeOf(new NumArray(1,2,3),(class NumArray extends Array { value = "test" }).prototype),x[1]])({})
+    > ((x={})=>[Object.setPrototypeOf(new NumArray(1,2,3),(class NumArray extends Array { value = "test" }).prototype),x[1]])()
     > ```
     > If you execute them you will notice that on the custom one that has not the scan defined there is a reference (`x[1]`) that is not defined anywhere, and it scanned the prototype of `NumArray` including it in the generated source, which is redundant.
 - Custom definitions
