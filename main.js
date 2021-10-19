@@ -33,12 +33,12 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
         opts.proxy ??= true;
         opts.proto ??= true;
         opts.depth ??= Infinity;
-        opts.call = (opts.call ?? true) || "";
+        opts.call ??= true;
         opts.safe ??= true;
         opts.func ??= true;
         opts.val ??= "x";
 
-        //[ Wrapping con funzione se "opts.call" è attivo e/o se serve la cache e/o la funzione di assegnazione ]
+        //[ Wrapping con funzione se "opts.call" è disattivato e/o se serve la cache e/o la funzione di assegnazione ]
         opts.stats = { assign: "", references: 0, depth: 0 };
         var out = uneval.source(obj, uneval.scan(obj, opts), opts, level);
         const wrap = !opts.call || (opts.func && (opts.stats.references || opts.stats.assign));
@@ -46,9 +46,13 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
             obj instanceof Function && obj.name && opts.safe || // Forces named functions to be expressions and not statements
             out[0] == "{" && (opts.safe || wrap)
         ) out = `(${ out })`;
-        return wrap
-            ? `((${ opts.val }${ opts.space }=${ opts.space }{${ opts.stats.assign && `${ opts.space }assign:${ opts.space }${ uneval.utils.assign }${ opts.space }` }})${ opts.space }=>${ opts.space }${ out })${ opts.call && "()" }`
-            : out;
+        return !wrap
+        ? out
+        : `((${
+            (opts.stats.references || opts.stats.assign)
+            ? `${ opts.val }${ opts.space }=${ opts.space }{${ opts.stats.assign && `${ opts.space }assign:${ opts.space }${ uneval.utils.assign }${ opts.space }` }}`
+            : ""
+        })${ opts.space }=>${ opts.space }${ out })${ opts.call ? "()" : "" }`;
     }
 
     /**
