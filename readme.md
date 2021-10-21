@@ -216,8 +216,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
 - Class static properties or prototype properties that are not defined in the class block
 
 ## Future Support (Hopefully) in order of probability
-1. Writing all comments in english (Some are in Italian) so you can understand better everything you eventually need
-2. Getters and Setters (For now are counted as normal properties)
+1. Getters and Setters (For now are counted as normal properties)
 
 ## Known Problems
 - On an object of a special class, if you add a custom property with a key which is one of those that the special class uses by default, then that property may be skipped (Look at <br> `[ ...uneval.utils.managedProtos.keys() ].map(x => x.constructor.name)` <br> for a full list)
