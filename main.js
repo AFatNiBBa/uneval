@@ -6,10 +6,12 @@
         [***]: "{ ['__proto___']: 1 }" setta la proprietà vera
         [WIP]: aggiungere proprietà proto a struct
         [WIP]: prendi constructor solo attraverso il "Object.getPrototypeOf(x).constructor"
-    [???]: proxy all'interno del suo target
-        [???]: proxy come proto del suo target
-
-    [WIP]: aggiorna readme.dm, main.d.ts
+        [WIP]: circular reference nel proto `((x={})=>(x[1]={b:x[2]={}},x[2].__proto__=x[1]))()`
+            [WIP]: sulla sezione dei riferimenti circolari metti `(Object.setPrototypeOf(x, proto), proto)`; Il proto finale mettilo solo se è l'ultimo riferimento
+        [WIP]: __proto__ stessa depth dell'oggetto genitore
+        [MAY]: Piuttosto che gestire diversamente i riferimenti circolari, crearli di diverse categorie e fare in modo che abbiano internalmente un metodo per trasformarli in codice
+            [WIP]: Indicare se tali rappresentazioni ritornano o meno il giusto oggetto, ed in caso contrario riportare l'elemento dalla cache
+    [WIP]: metti la lambda per rendere sicuri i metodi sull'oggetto di cache
 */
 
 var uneval = (typeof module === "undefined" ? {} : module).exports = (function () {

@@ -147,7 +147,7 @@ declare module "uneval.js" {
          * @param struct Object that represents the structure of "key"
          * @param inner Structure of the inner object that contains a reference to an outer one
          * @param outer Outer object
-         * @param delegate Eventual pair value-struct that will contain the value to set if it could not be put inside the cache variable
+         * @param delegate Eventual pair value-struct that will contain the value to set, in the case that the inner object's property cannot be set but only initialized during the creation of the inner object
          */
         constructor(
             public key: string | symbol,
