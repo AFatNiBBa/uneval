@@ -102,6 +102,8 @@ The available options are:
     - It defaults to `true`
 - **`depth`**
     - If not `Infinity` specifies the maximum depth in which the object should be serialized
+    - The object and its prototype are considered on the same depth
+    - At least `1`
     - It defaults to `Infinity`
 - **`call`**
     - If `false` wraps forcibly the result in a function but doesn't evaluate it
@@ -159,6 +161,7 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     > Note that generating like that a method called "function" would work by default
 - Big Integers
 - Objects with a `null` prototype
+- The `"__proto__"` key as a real property and not as a way of setting the prototype
 - Custom types
 - Custom conversions
     > To define your own conversion you just need to define a function in your object (Or in its prototype) under the symbol `uneval.utils.customSource` (Or `Symbol.for("uneval.utils.customSource")` when uneval is not in the current context)
@@ -225,9 +228,9 @@ Note that in every option which accepts a boolean you can put `0` to represent `
     a.name = { a: 1 };
     console.log(eval(uneval(a)).name); // b
     ```
-- If you set the property `"__proto__"` on an object, the function will think that you are trying to assign the prototype
+- If a `Proxy` is inside of its target, is used a special kind of circular reference in which the value will be defined, there could be a reference to that value before it has been defined
     ```js
-    const a = Object.defineProperty({}, "__proto__", { value: 12, enumerable: true });
-    console.log(a);                 // { ['__proto__']: 12 }
-    console.log(eval(uneval(a)))    // Uncaught TypeError: Object prototype may only be an Object or null: 12
+    const a = {};
+    a.b = a.c = new Proxy(a, {});
+    console.log(eval(uneval(a)).b) // undefinded
     ```

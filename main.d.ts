@@ -117,9 +117,8 @@ declare module "uneval.js" {
          * @param opts An object containing the preferences of the scanning 
          * @param cache A map containing the structures of the traversed objects
          * @param prev A way for the function to communicate to the parent call (About circular references); If it's `false` then it does not check the internal properties
-         * @param parent The informations about the parent object
          */
-        static from(obj: any, opts?: Opts, cache?: Map<any, Struct>, prev?: (cir: Circular) => boolean, parent?: Circular): Delegate;
+        static from(obj: any, opts?: Opts, cache?: Map<any, Struct>, prev?: (cir: Circular) => number | undefined): Delegate;
 
         /**
          * @param value An object that will represent another
@@ -150,7 +149,7 @@ declare module "uneval.js" {
          * @param delegate Eventual pair value-struct that will contain the value to set, in the case that the inner object's property cannot be set but only initialized during the creation of the inner object
          */
         constructor(
-            public key: string | symbol,
+            public key: string | symbol | null,
             public struct: IStruct,
             public inner: IStruct,
             public outer?: any,
@@ -165,14 +164,14 @@ declare module "uneval.js" {
         /**
          * All parameters are optional.
          * @param delegate Eventual pair value-struct that will represents the current object
-         * @param skip Skips the property that contains this struct, because it will be saved inside the circular reference part of the object definition
+         * @param proto Structure of the eventual prototype of the object
          * @param id Eventual index of the object inside of the cache
          * @param sub Object that maps the object properties to a pair of structs that represent respectively the structure of the key and the value of the property
          * @param cir List of the circular references that have the current object as value
          */
         constructor(
             public delegate?: IDelegate,
-            public skip?: boolean,
+            public proto?: IStruct,
             public id?: string | number,
             public sub?: Map<string | symbol, [ Struct, Struct ]>,
             public cir?: Circular[]
@@ -223,9 +222,8 @@ declare module "uneval.js" {
          * @param opts An object containing the preferences of the scanning 
          * @param cache A map containing the structures of the traversed objects
          * @param prev A way for the function to communicate to the parent call (About circular references); If it's `false` then it does not check the internal properties
-         * @param parent The informations about the parent object
          */
-        scan(obj: any, opts?: Opts, cache?: Map<any, Struct>, prev?: (cir: Circular) => boolean, parent?: Circular): IStruct,
+        scan(obj: any, opts?: Opts, cache?: Map<any, Struct>, prev?: (cir: Circular) => boolean): IStruct,
 
         /**
          * Gets the details of a proxy.
@@ -246,13 +244,20 @@ declare module "uneval.js" {
             customSource: symbol,
 
             /**
-             * Gets if the passed function source code is an object method, like:
+             * Gets if the passed function source code defines an object method, like:
              * 
              *     func() {
              *         // ...
              *     }
              */
             method: RegExp,
+
+            /**
+             * Returns the value of the first property of "x".
+             * Should be used with objects that have only one property.
+             * @param x The outer object
+             */
+            first(x: object): any,
 
             /**
              * Same as `Object.assign()` but it sets special or non enumerable properties too.
