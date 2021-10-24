@@ -5,10 +5,6 @@
     [/!\]: le proprietà gestite di oggetti gestiti non vengono salvate anche se sovrascritte dall'utente
     [/!\]: ci possono essere riferimenti ad oggetti definiti nella zona dei riferimenti circolari prima di essa `((x={})=>(x[1]={b:x[2]},x[1].c=x[2]=new Proxy(x[1],{}),x[1]))()`
         [???]: "prv_test.js" > "[/!\]"
-
-    [***]: metti la lambda per rendere sicuri i metodi sull'oggetto di cache
-    [NEW]: supporto __proto__
-    [FIX]: target > handler > proxy
 */
 
 var uneval = (typeof module === "undefined" ? {} : module).exports = (function () {
