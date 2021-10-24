@@ -98,7 +98,7 @@ The available options are:
     - If it is set to `true` stringifies proxies as they really are
     - It defaults to `true` (In the browser it is always counted as `false` because it uses things that are only in node)
 - **`proto`**
-    - Saves the class of objects (Including the `__proto__` property)
+    - Saves the class of objects (Using `Object.setPrototypeOf()`)
     - It defaults to `true`
 - **`depth`**
     - If not `Infinity` specifies the maximum depth in which the object should be serialized
