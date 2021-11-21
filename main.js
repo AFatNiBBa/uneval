@@ -1,7 +1,6 @@
 
 /*
     [WIP]: {function,object,array}.{get,set}
-    [MAY]: scan > next() => new Map<any, depth>()
     [/!\]: le proprietà gestite di oggetti gestiti non vengono salvate anche se sovrascritte dall'utente
     [/!\]: ci possono essere riferimenti ad oggetti definiti nella zona dei riferimenti circolari prima di essa `((x={})=>(x[1]={b:x[2]},x[1].c=x[2]=new Proxy(x[1],{}),x[1]))()`
         [???]: "prv_test.js" > "[/!\]"
@@ -32,10 +31,11 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
         opts.func ??= true;
         opts.val ??= "x";
 
-        //[ Wrapping con funzione se `opts.call` è disattivato e/o se serve la cache e/o la funzione di assegnazione ]
+        //[ Wrapping con funzione se `opts.call` è disattivato e/o se serve la cache e/o la funzione di assegnazione e/o la funzione di gestione metodi ]
         opts.stats = { assign: "", first: "", references: 0, depth: 0 };
         var out = uneval.source(obj, uneval.scan(obj, opts), opts, level);
-        const wrap = !opts.call || (opts.func && (opts.stats.references || opts.stats.assign));
+        const cache = opts.stats.references || opts.stats.assign || opts.stats.first || "";
+        const wrap = !opts.call || (opts.func && cache);
         if (
             obj instanceof Function && obj.name && opts.safe || // Forces named functions to be expressions and not statements
             out[0] == "{" && (opts.safe || wrap)
@@ -43,7 +43,7 @@ var uneval = (typeof module === "undefined" ? {} : module).exports = (function (
         return !wrap
         ? out
         : `((${
-            (opts.stats.references || opts.stats.assign || "")
+            cache
             && `${ opts.val }${ opts.space }=${ opts.space }{${ 
                 (opts.stats.first && `${ opts.space }first:${ opts.space }${ uneval.utils.first }${ opts.space }`) +
                 (opts.stats.assign && `${ opts.space }assign:${ opts.space }${ uneval.utils.assign }${ opts.space }`)
