@@ -1,0 +1,57 @@
+
+quando mandi fa che buildi meno file possibili
+
+accorpa "hashSet" e "hashMap"
+
+writer di utility per robe multilinea per sostituire "getFormat()" >> togli "getFormat()"
+
+circular dentro circular > flat?
+
+------------------------------------------------------------------------------------------------------------
+
+sui circular potrebbe venir settato un setter piuttosto che il campo > "PROTO_OF" deve andare prima del circular????? { non è che poi serve un'altro circular specializzato per i oggetti dentro i loro prototipi? > forse no perchè tanto va sul circular del prototipo }
+
+getter / setter
+
+custom su primitivi >> function > special > circular > il caso particolare nella definizione su un oggetto potrebbe creare problemi, indaga
+
+promise
+
+protof > aggiunta al circular > se dopo quella chiamata riferisci proto verrà preso prima di essere scritto? > (se getti il riferimento prima che sia eseguita l'istruxzione sul circular)
+
+deferred > {
+    ripensa meglio > defer a catena dei babbi
+
+    "Circ.min()" > guarda come comportasse coi deferred > (anche tipo su proxy potrebbero esserci più proxy a catena)
+
+    { "HASH_SET", "HASH_MAP", "PROTO_OF", "PROTO" > (defer se anche la classe è deferrata) } > guarda come comportasse coi deferred > (usa "Circ.try()")
+
+    ~keyValuePair > guarda come comportasse coi deferred / ricicla array
+
+    "Deferred" > {
+        "defer()" > eliminazione riferimenti > (peffo?)
+        "toString()" >
+            perchè ci arriva in primo luogo? > 
+                su "Circ.try()" non ha più il deferred sullo store per qualche motivo {
+                    non è che lo store crea oggetti in più piuttosto che riciclarli?
+                    non è che se usi come chiave su una "Map" una proxy ed il suo target puntano allo stesso valore?????
+                }
+    } > va bene?
+}
+
+------------------------------------------------------------------------------------------------------------
+
+gli accessor alle chiavi degli store fanno due lookup nell'eventualità in cui si legge una chiave, manca e quindi si crea > fai una cache dell'ultimo utilizzato? Poichè è più probabile che è quello che verrà richiesto > in caso sullo stats perchè se lo metti sulle funzioni specifiche hai due problemi > {
+    non ti collecta un pezzo di roba perchè quelle funzioni armangono vive
+    non hai il beneficio della cache cross chiave > fallo iper mega globale ma con un weak ref?
+}
+
+"Call" > se ha un solo parametro togli tutti gli a capi?
+
+depth > facci """modulo""" a parte? > anche se non lo controlli sempre dovrebbe comunque essere aumentato sempre? > sennò non fa bene e sempre "Circ.min()"
+
+------------------------------------------------------------------------------------------------------------
+
+I CIRC NORMALI DELLE PROXY RIMUOVONO QUELLI DEFERRED QUANDO HANNO FATTO > metti deferred e circ su due posti diversi? >> fai una funzione unica
+
+"const out = new Set<any>([ 1, 2, 3 ]); out.add(out).add([out]);" > viene serializzato male
