@@ -5,7 +5,8 @@ import { Stats } from "../../helper/stats";
 import { Ref, getRef } from "./ref";
 import { Key } from "../util/key";
 
-export const [ getCirc, setCirc ] = createStoreKey<ICirc>("circ");
+const [ getCirc, setCirc ] = createStoreKey<Circ>("circ");
+export { getCirc };
 
 export const CIRC: Serializer = (x, stats, next) => {
     if (typeof x === "string" || typeof x === "symbol") return FAIL;
@@ -13,25 +14,24 @@ export const CIRC: Serializer = (x, stats, next) => {
     if (getRef(stats, x)) return FAIL; // If the reference is already present it means that there is no need to create a new "Circ" since the object is only being referenced
 
     const out = setCirc(stats, x, new Circ(stats));
-    const struct = out.value = next();
+    out.value = next();
     out.ref = getRef(stats, x);
-    const temp = getCirc(stats, x);
-    if (temp !== out) return struct;
     setCirc(stats, x);
-    out.complete();
+    out.dispose?.();
+    out.dispose = undefined;
     return out;
 }
 
 export interface ICirc {
     depth: number;
-    children: Deferred[];
     add(value: IResult, returnsSelf?: boolean): void;
+    onCleanup(f: () => void): void;
 }
 
 export class Circ implements ICirc, IResult {
     returnsSelf = true;
-    children: Deferred[] = [];
     list: IResult[] = [];
+    dispose?: () => void;
     value: IResult;
     depth: number;
     ref: Ref;
@@ -43,9 +43,9 @@ export class Circ implements ICirc, IResult {
         this.returnsSelf = returnsSelf;
     }
 
-    complete() {
-        this.children.forEach(x => setCirc(this.stats, x.obj));
-        this.children.length = 0;
+    onCleanup(f: () => void) {
+        const { dispose } = this;
+        this.dispose = dispose ? () => (dispose(), f()) : f;
     }
 
     toString(level: string, safe: boolean) {
@@ -78,14 +78,4 @@ export class Circ implements ICirc, IResult {
         circ.add(wrap`${ stats.scan(obj) }${ new Key(stats, k, false) }${ space }=${ space }${ out }`);
         return null;
     }
-}
-
-export class Deferred implements ICirc {
-    get depth() { return this.circ.depth; }
-
-    get children() { return this.circ.children; }
-
-    constructor(public obj: any, public circ: ICirc) { circ.children.push(this); }
-
-    add(value: IResult) { this.circ.add(value, false); }
 }

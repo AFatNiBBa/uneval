@@ -1,8 +1,8 @@
 
 import { IResult, Serializer, FAIL } from "../../helper/serializer";
 import { getFormat, isClass, wrap } from "../../helper/util";
+import { getDeferredOrCirc } from "../util/deferred";
 import { Stats } from "../../helper/stats";
-import { getCirc } from "./circ";
 
 const known = new Set([ RegExp, Date, String, Number, BigInt, Boolean, Symbol, Function, Array, Object, Set, Map ].map(x => x.prototype));
 
@@ -15,7 +15,7 @@ export const PROTO_OF: Serializer = (x: object, stats, next) => {
     if (known.has(proto)) return FAIL; // This serializer handles derived prototypes of the handled ones so it must be before the things it will probably skip
 
     const struct = stats.scan(proto);
-    const circ = getCirc(stats, proto);
+    const circ = getDeferredOrCirc(stats, proto);
     if (!circ) return new ProtoOf(stats, next(), struct);
 
     circ.add(wrap`Object.setPrototypeOf(${ stats.scan(x) },${ stats.opts.space }${ struct })`, false);

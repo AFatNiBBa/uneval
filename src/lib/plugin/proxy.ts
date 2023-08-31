@@ -1,11 +1,12 @@
 
 import { IResult, Serializer, FAIL } from "../../helper/serializer";
-import { Circ, Deferred, setCirc } from "../route/circ";
 import { OBJECT_NULL_PROTOTYPE } from "../route/simple";
 import { getFormat } from "../../helper/util";
 import { ok, fromProxy } from "internal-prop";
+import { Deferred } from "../util/deferred";
 import { Stats } from "../../helper/stats";
 import { addBefore } from "../stdlib";
+import { Circ } from "../route/circ";
 
 export const PROXY: Serializer = (x, stats) => {
     if (!ok) return FAIL;
@@ -13,7 +14,7 @@ export const PROXY: Serializer = (x, stats) => {
     if (!temp) return FAIL;
     const out = new Prx(stats, stats.scan(temp[0]), stats.scan(temp[1]));
     const circ = Circ.min(stats, temp);
-    if (circ) setCirc(stats, x, new Deferred(x, circ));
+    if (circ) Deferred.basedOn(stats, circ, x);
     return out;
 };
 

@@ -1,8 +1,9 @@
 
 import { IResult, Serializer, FAIL } from "../../helper/serializer";
+import { getDeferredOrCirc } from "../util/deferred";
 import { Stats } from "../../helper/stats";
-import { ICirc, getCirc } from "./circ";
 import { Call } from "../util/call";
+import { ICirc } from "./circ";
 import { Arr } from "./array";
 
 const ADD_ALL: <T>(a: Set<any>, b: T, ...c: any[]) => T = (s,...l)=>(l.forEach(e=>s.add(e)),l[0]);
@@ -20,7 +21,7 @@ export class HashSet implements IResult {
             for (var value: any; !({ value } = iter.next()).done; )
             {
                 const struct = stats.scan(value);
-                const circ = getCirc(stats, value);
+                const circ = getDeferredOrCirc(stats, value);
 
                 if (circ)
                 {
@@ -41,7 +42,7 @@ export class HashSet implements IResult {
         for (var value: any; !({ value } = iter.next()).done; )
         {
             const temp = this.stats.scan(value);
-            const sub = getCirc(this.stats, value);
+            const sub = getDeferredOrCirc(this.stats, value);
 
             if (sub)
             {
