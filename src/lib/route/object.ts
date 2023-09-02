@@ -1,6 +1,6 @@
 
 import { IResult, Serializer, FAIL } from "../../helper/serializer";
-import { getFormat, wrap } from "../../helper/util";
+import { getFormat } from "../../helper/util";
 import { Stats } from "../../helper/stats";
 import { getFunc } from "./func";
 import { Key } from "../util/key";
@@ -23,17 +23,7 @@ export class Obj implements IResult {
                     if (k === "__proto__") v = undefined; // If the it is the "__proto__" property (Or it is explicitly requested) it has to get defined to avoid setting the actual prototype
                     else continue;
 
-                if (stats.opts.method && typeof v === "function" && v.name === k)
-                {
-                    const func = getFunc(stats, v);
-                    if (func.first && !getRef(stats, v)?.used)
-                    {
-                        this.list.push(func.source);
-                        continue;
-                    }                    
-                }
-
-                this.list.push(wrap`${ new Key(stats, k, true) }:${ this.stats.opts.space }${ struct ?? "undefined" }`);
+                this.list.push(new Prop(stats, new Key(stats, k, true), struct ?? "undefined", v));
             }
         }
         stats.depth--;
@@ -49,5 +39,20 @@ export class Obj implements IResult {
             
         out = `{${ out }${ LAST }}`;
         return safe ? out : `(${ out })`;
+    }
+}
+
+export class Prop implements IResult {
+    constructor(public stats: Stats, public key: Key, public struct: IResult, public value: any) { }
+
+    toString(level: string) {
+        if (this.stats.opts.method && typeof this.value === "function" && this.value.name === this.key.k)
+        {
+            const func = getFunc(this.stats, this.value);
+            if (func.first && !getRef(this.stats, this.value)?.id)
+                return func.source;
+        }
+
+        return `${ this.key.toString(level) }:${ this.stats.opts.space }${ this.struct.toString(level, true) }`;
     }
 }

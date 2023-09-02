@@ -18,25 +18,24 @@ export const REF: Serializer = (x, stats, next) => {
 }
 
 export class Ref implements IResult {
-    ptr: Ptr;
+    id: number;
     value: IResult;
+    defined: boolean;
 
-    get used() { return this.ptr != null; }
+    get ptr() { return `${ this.stats.opts.val }[${ this.id }]`; }
     
     constructor(public stats: Stats) { }
     
-    makePtr() { return this.ptr ??= new Ptr(this, ++this.stats.lastIndex); }
+    makePtr() { return this.id ||= ++this.stats.lastIndex, this; }
 
     toString(level: string, safe: boolean) {
-        const temp = this.value.toString(level, this.used || safe);
-        if (!this.used) return temp;
+        if (this.defined) return this.ptr;
+
+        const temp = this.value.toString(level, !!this.id || safe);
+        if (!this.id) return temp;
+        
+        this.defined = true;
         const out = `${ this.ptr }${ this.stats.opts.space }=${ this.stats.opts.space }${ temp }`;
         return safe ? out : `(${ out })`;
     }
-}
-
-export class Ptr implements IResult {
-    constructor(public ref: Ref, public id: number) { }
-    
-    toString() { return `${ this.ref.stats.opts.val }[${ this.id }]`; }
 }

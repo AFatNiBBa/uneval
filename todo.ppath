@@ -1,4 +1,10 @@
 
+monorepo > {
+    uneval.js
+    @seanalunni/uneval-v8 > internal-prop
+    (private) test > jest
+}
+
 quando mandi fa che buildi meno file possibili
 
 accorpa "hashSet" e "hashMap"

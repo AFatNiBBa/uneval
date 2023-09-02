@@ -74,8 +74,16 @@ export class Circ implements ICirc, IResult {
         const out = stats.scan(v);
         const circ = getCirc(stats, v);
         if (!circ) return out;
-        const { space } = stats.opts;
-        circ.add(wrap`${ stats.scan(obj) }${ new Key(stats, k, false) }${ space }=${ space }${ out }`);
+        circ.add(new Ass(stats, stats.scan(obj), new Key(stats, k, false), out));
         return null;
+    }
+}
+
+export class Ass implements IResult {
+    constructor(public stats: Stats, public obj: IResult, public key: IResult, public value: IResult) { }
+
+    toString(level: string): string {
+        const { space } = this.stats.opts;
+        return `${ this.obj.toString(level, false) }${ this.key }${ space }=${ space }${ this.value.toString(level, true) }`;
     }
 }

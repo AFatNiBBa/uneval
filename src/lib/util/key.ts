@@ -12,7 +12,7 @@ export class Key implements IResult {
     constructor(public stats: Stats, public k: string | symbol, public isObj: boolean) { this.value = stats.scan(k); }
 
     toString(level: string): string {
-        return this.isObj && this.k === "__proto__" || typeof this.k === "symbol" || getRef(this.stats, this.k)?.used
+        return this.isObj && this.k === "__proto__" || typeof this.k === "symbol" || getRef(this.stats, this.k)?.id
             ? `[${ this.value.toString(level, true) }]`
             : this.k.match(isVariable)
                 ? this.isObj ? this.k : `.${ this.k }`

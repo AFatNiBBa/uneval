@@ -15,19 +15,3 @@ export function uneval(obj: any, opts?: InputOpts | Stats) {
 
 export * from "./lib/stdlib";
 export default uneval;
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-
-const out = new Set<any>([ 1, 2, 3 ]);
-out.add(out).add([out]);
-
-show(out);
-
-function show(x: any) {
-    console.dir(x);
-    console.log();
-    const out = uneval(x, { tab: 2 });
-    console.log(out);
-    console.log();
-    console.dir(eval(out));
-}
