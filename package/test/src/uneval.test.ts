@@ -1,9 +1,5 @@
 
-const { uneval } = require("../dist/index");
-
-const serialize = (x, opts) => uneval(x, Object.assign({ pretty: false }, opts));
-const check = (name, x, str) => test(name, () => expect(serialize(x)).toBe(str));
-const back = x => (0,eval)(serialize(x));
+import { check, back } from "./util";
 
 describe("simple", () => {
     check("global", globalThis, "globalThis");
@@ -28,7 +24,7 @@ describe("set", () => {
     check("normal", new Set([ 1, 2, 3 ]), "new Set([1,2,3])");
     
     test("circular", () => {
-        const a = new Set([ 1, 2, 3 ]);
+        const a = new Set<any>([ 1, 2, 3 ]);
         a.add(6).add(a).add(7);
         const b = back(a);
         const c = [...b];
@@ -46,7 +42,7 @@ describe("map", () => {
     check("normal", new Map([ [ 1, 2 ], [ 3, 4 ] ]), "new Map([[1,2],[3,4]])");
     
     test("circular", () => {
-        const a =  new Map([ [ 1, 2 ], [ 3, 4 ] ]);
+        const a =  new Map<any, any>([ [ 1, 2 ], [ 3, 4 ] ]);
         const b = { a };
         a.set(5, 6).set(a, b).set(b, a).set({ a },a).set(8, 9);
         const c = back(b);
@@ -67,7 +63,7 @@ describe("proto-of", () => {
     check("normal", Object.setPrototypeOf({a:1},{b:2}), "Object.setPrototypeOf({a:1},{b:2})");
     
     test("circular", () => {
-        const a = {};
+        const a: any = {};
         const b = { c: Object.setPrototypeOf({ d: 4 }, a) };
         a.b = b;
         const c = back(a);
@@ -79,7 +75,6 @@ describe("proto-of", () => {
 });
 
 describe("function", () => {
-    // The source of the functions may be different from what has been written (Mostly with spacing) because "jest" preprocesses the file
     check("large-named", function a() {}, "(function a() {})");
     check("large", function () {}, "(function () {})");
     check("lambda", () => {}, "(() => {})");
@@ -89,7 +84,7 @@ describe("function", () => {
     check("special-renamed", { b: { a() { } }.a }, "({b:(x => x[Reflect.ownKeys(x)[0]])({a() {}})})");
 
     test("special-ref", () => {
-        const a = { a() { return 12; } };
+        const a: any = { a() { return 12; } };
         a.b = a.a;
         const b = back(a);
         expect(b).toHaveProperty("a");
@@ -125,14 +120,14 @@ describe("proto", () => {
 });
 
 test("circ", () => {
-    const a = {};
+    const a: any = {};
     a.a = a;
     const b = back(a);
     expect(b).toHaveProperty("a", b);
 });
 
 test("ref", () => {
-    const a = { b: {} };
+    const a: any = { b: {} };
     a.c = a.b;
     const b = back(a);
     expect(b).toHaveProperty("b");

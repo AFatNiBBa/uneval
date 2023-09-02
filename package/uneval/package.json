@@ -1,0 +1,32 @@
+{
+  "name": "uneval.js",
+  "version": "6.0.0",
+  "description": "Serializes objects to javascript with extreme precision (Can support PROXIES too!)",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "save": "npm run build && npm publish && push"
+  },
+  "keywords": [
+    "uneval",
+    "eval",
+    "toSource",
+    "serialize",
+    "serialization",
+    "circular",
+    "reference",
+    "jsproxy",
+    "proxy",
+    "stringify",
+    "json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AFatNiBBa/uneval"
+  },
+  "author": "AFatNiBBa",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}

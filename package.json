@@ -1,21 +1,10 @@
 {
-  "name": "uneval",
-  "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",
+  "private": true,
+  "workspaces": [
+    "package/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "test": "cls & jest"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@types/jest": "^29.5.4",
-    "jest": "^29.6.4",
-    "typescript": "^5.1.6"
-  },
-  "dependencies": {
-    "internal-prop": "^3.0.3"
+    "build": "npm run build -w package/uneval && npm run build -w package/plugin",
+    "test": "npm run build && npm run test -w package/test"
   }
 }

@@ -3,7 +3,7 @@
 	"include": [ "./src/**/*.ts" ],
 	"compilerOptions" : {
 		"module": "UMD",
-		"removeComments" : true,
+		"removeComments" : false,
 		"outDir" : "./dist",
 		"experimentalDecorators": true,
 		"baseUrl" : "./",
@@ -11,6 +11,6 @@
 		"sourceMap": true,
 		"strict": false,
 		"target": "es2020",
-		"moduleResolution": "nodenext"
+		"moduleResolution": "Node"
 	}
 }

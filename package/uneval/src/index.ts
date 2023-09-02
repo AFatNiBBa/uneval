@@ -13,5 +13,6 @@ export function uneval(obj: any, opts?: InputOpts | Stats) {
     return `((${ cache })${ space }=>${ space }${ out })${ call ? "()" : "" }`;    
 }
 
-export * from "./lib/stdlib";
+export * as Internal from "./helper/internal";
+export { InputOpts as Opts };
 export default uneval;

@@ -1,14 +1,19 @@
 
-import { IResult, Serializer, FAIL } from "../../helper/serializer";
-import { OBJECT_NULL_PROTOTYPE } from "../route/simple";
-import { getFormat } from "../../helper/util";
 import { ok, fromProxy } from "internal-prop";
-import { Deferred } from "../util/deferred";
-import { Stats } from "../../helper/stats";
-import { addBefore } from "../stdlib";
-import { Circ } from "../route/circ";
+import { Internal } from "uneval.js";
 
-export const PROXY: Serializer = (x, stats) => {
+const {
+    FAIL,
+    addBefore,
+    util: { getFormat },
+    Route: {
+        circ: { Circ },
+        deferred: { Deferred },
+        simple: { OBJECT_NULL_PROTOTYPE }
+    }
+} = Internal;
+
+export const PROXY: Internal.Serializer = (x, stats) => {
     if (!ok) return FAIL;
     const temp = fromProxy(x);
     if (!temp) return FAIL;
@@ -18,8 +23,8 @@ export const PROXY: Serializer = (x, stats) => {
     return out;
 };
 
-export class Prx implements IResult {
-    constructor(public stats: Stats, public target: IResult, public handler: IResult) { }
+export class Prx implements Internal.IResult {
+    constructor(public stats: Internal.Stats, public target: Internal.IResult, public handler: Internal.IResult) { }
 
     toString(level: string) {
         const { LAST, FULL, NEXT } = getFormat(this.stats.opts, level);

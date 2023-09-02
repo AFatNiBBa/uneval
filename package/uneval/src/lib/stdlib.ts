@@ -21,30 +21,6 @@ export function addAfter(ref: Serializer, value: Serializer) {
     stdlib.splice(stdlib.indexOf(ref) + 1, 0, value);
 }
 
-export {
-    GLOBAL,
-    GLOBAL_SYMBOL,
-    NEG_0,
-    SIMPLE,
-    BIG_INT,
-    CIRC,
-    REF,
-    STRING,
-    SYMBOL,
-    OBJECT_NULL_PROTOTYPE,
-    PROTO,
-    PROTO_OF,
-    REGEX,
-    DATE,
-    HASH_SET,
-    HASH_MAP,
-    WRAPPER,
-    FUNCTION,
-    ARRAY,
-    OBJECT,
-    NOT_SUPPORTED
-};
-
 export const stdlib = [
     GLOBAL,
     GLOBAL_SYMBOL,
