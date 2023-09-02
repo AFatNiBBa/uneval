@@ -5,6 +5,7 @@
   ],
   "scripts": {
     "build": "npm run build -w package/uneval && npm run build -w package/plugin",
-    "test": "npm run build && npm run test -w package/test"
+    "test": "npm run build && npm run test -w package/test",
+    "clean": "git clean -Xdf"
   }
 }

@@ -1,13 +1,5 @@
 
-monorepo > {
-    uneval.js
-    @seanalunni/uneval-v8 > internal-prop
-    (private) test > jest
-}
-
 quando mandi fa che buildi meno file possibili
-
-accorpa "hashSet" e "hashMap"
 
 writer di utility per robe multilinea per sostituire "getFormat()" >> togli "getFormat()"
 
@@ -56,18 +48,16 @@ gli accessor alle chiavi degli store fanno due lookup nell'eventualità in cui s
 
 depth > facci """modulo""" a parte? > anche se non lo controlli sempre dovrebbe comunque essere aumentato sempre? > sennò non fa bene e sempre "Circ.min()"
 
-metti i finally del caso
+metti i finally del caso { depth }
 
 ------------------------------------------------------------------------------------------------------------
 
 I CIRC NORMALI DELLE PROXY RIMUOVONO QUELLI DEFERRED QUANDO HANNO FATTO > metti deferred e circ su due posti diversi? >> fai una funzione unica
 
-"const out = new Set<any>([ 1, 2, 3 ]); out.add(out).add([out]);" > viene serializzato male
-
 SEPARA IL DEFERRED DAL CIRC E QUANDO DEFERRI LE ROBE SUL SET E SUL MAP SEGNAGLI CHE SONO DEFERRATI > NON è CHE SMETTE DI ESSERE DEFERRATO TROPPO PRESTO???? > RIPENSA DE NOVO > SOPRATTUTTO PERCHé ANCHE SUGLI OGGETTI SCANNI PRIMA IL VALORE CHE LA CHIAVE
 
 ASSICURATI NUOVAMENTE CHE DA TUTTE LE PARTI LE ROBE SIANO SCANNATE NELL'ORDINE IN CUI COMPAIONO > (soprattutto se c'è il rischio che da quella prima venga un "Ptr") > FATTI UN FAVORE ED ATTACCA "Ref" e "Ptr"
 
-git clean -Xdf > cancella i file ignorati > comando sulla monorepo
-
 test riferimenti circolari proxy
+
+fare tutte le modifiche strutturali del codice > { defer, circ, ref > (già fatto) } > quando si converte a stringa > (perchè devono aver cognizione di tutta la struttura)
